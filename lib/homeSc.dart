@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Text(
             'GPT Bets AI',
             style: GoogleFonts.orbitron(
-              color: Color(0xFF00FF00),
+              color: Color(0xFF59A52B),
               fontWeight: FontWeight.w600,
               fontSize: 22,
             ),
@@ -65,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen>
                   textStyle: GoogleFonts.orbitron(
                     fontSize: 26,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF00FF00),
+                    color: Color(0xFF59A52B),
                   ),
                   speed: Duration(milliseconds: 100),
                 ),
@@ -92,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen>
                   Get.toNamed('/predictions');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF00FF00),
+                  backgroundColor: Color(0xFF59A52B),
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
@@ -116,13 +117,31 @@ class _HomeScreenState extends State<HomeScreen>
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
-                  _buildFeatureTile(Icons.trending_up, 'Live Odds'),
                   _buildFeatureTile(Icons.analytics, 'AI Analysis'),
                   _buildFeatureTile(Icons.sports_soccer, 'Game Stats'),
-                  _buildFeatureTile(Icons.monetization_on, 'Bet Tracking'),
                 ],
               ),
             ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF59A52B), // Button background color
+                foregroundColor: Colors.black, // Text and icon color
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: launchUrlExample,
+              icon: const Icon(
+                Icons.sports_football,
+                color: Colors.black,
+              ), // Football-like icon
+              label: const Text(
+                'Learn More',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            )
           ],
         ),
       ),
@@ -136,10 +155,10 @@ class _HomeScreenState extends State<HomeScreen>
         decoration: BoxDecoration(
           color: Color(0xFF1A1A1A),
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Color(0xFF00FF00), width: 1.5),
+          border: Border.all(color: Color(0xFF59A52B), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF00FF00).withOpacity(0.15),
+              color: Color(0xFF59A52B).withOpacity(0.15),
               blurRadius: 6,
               spreadRadius: 1,
             ),
@@ -148,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: Color(0xFF00FF00)),
+            Icon(icon, size: 40, color: Color(0xFF59A52B)),
             SizedBox(height: 8),
             Text(
               title,
@@ -162,5 +181,15 @@ class _HomeScreenState extends State<HomeScreen>
         ),
       ),
     );
+  }
+}
+
+Future<void> launchUrlExample() async {
+  final Uri url = Uri.parse('https://gptbets.io/');
+
+  if (await canLaunchUrl(url)) {
+    await launchUrl(url, mode: LaunchMode.inAppBrowserView);
+  } else {
+    throw 'Could not launch $url';
   }
 }
