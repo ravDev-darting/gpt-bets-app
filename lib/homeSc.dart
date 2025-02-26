@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:gptbets_sai_app/loginPage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,10 +19,28 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+  bool _loggediN = false;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  void _checkLoginStatus() {
+    User? user = _auth.currentUser;
+
+    if (user != null) {
+      // If the user is logged in, navigate to DashScreen
+      setState(() {
+        _loggediN = true;
+      });
+    } else {
+      // If the user is not logged in, navigate to LoginScreen
+      setState(() {
+        _loggediN = false;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _checkLoginStatus();
     _controller = AnimationController(
       vsync: this,
       duration: Duration(seconds: 2),
@@ -35,9 +57,31 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final Color themeColor = Color(0xFF59A52B);
     return Scaffold(
       backgroundColor: Color(0xFF121212),
       appBar: AppBar(
+        leading: _loggediN
+            ? IconButton(
+                color: Color(0xFF59A52B),
+                onPressed: () async {
+                  await _logout(context);
+                },
+                icon: Icon(Icons.power_settings_new_outlined),
+              )
+            : IconButton(
+                color: Color(0xFF59A52B),
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            const LoginScreen()), // Navigate to your main screen after logout
+                    ModalRoute.withName(''),
+                  );
+                },
+                icon: Icon(Icons.arrow_back_ios),
+              ),
         backgroundColor: Colors.black,
         title: FadeTransition(
           opacity: _fadeAnimation,
@@ -86,41 +130,149 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
             SizedBox(height: 25),
-            ScaleTransition(
-              scale: _fadeAnimation,
-              child: ElevatedButton(
-                onPressed: () {
-                  Get.toNamed('/predictions');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF59A52B),
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  shadowColor: Colors.transparent,
-                ),
-                child: Text(
-                  'View Predictions',
-                  style: GoogleFonts.orbitron(
-                    fontSize: 16,
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 30),
+            _loggediN
+                ? ScaleTransition(
+                    scale: _fadeAnimation,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.toNamed('/predictions');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF59A52B),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        shadowColor: Colors.transparent,
+                      ),
+                      child: Text(
+                        'View Predictions',
+                        style: GoogleFonts.orbitron(
+                          fontSize: 16,
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
+                : SizedBox(),
+            SizedBox(height: _loggediN ? 30 : 10),
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
-                  _buildFeatureTile(Icons.analytics, 'AI Analysis'),
-                  _buildFeatureTile(Icons.sports_soccer, 'Game Stats'),
+                  _buildFeatureTile(Icons.analytics, 'AI Analysis', onTap: () {
+                    _loggediN
+                        ? Get.toNamed('/predictions')
+                        : Get.snackbar(
+                            backgroundColor: Colors.white,
+                            duration: Duration(seconds: 3),
+                            colorText: Color(0xFF59A52B),
+                            'Subscribe',
+                            'Subscribe to access this feature');
+                  }),
+                  _buildFeatureTile(Icons.sports_soccer, 'Game Stats',
+                      onTap: () {
+                    _loggediN
+                        ? Get.toNamed('/sportsHub')
+                        : Get.snackbar(
+                            backgroundColor: Colors.white,
+                            duration: Duration(seconds: 3),
+                            colorText: Color(0xFF59A52B),
+                            'Subscribe',
+                            'Subscribe to access this feature');
+                  }),
+                  _loggediN
+                      ? _buildFeatureTile(Icons.article, 'Bets Analysis')
+                      : SizedBox(),
+                  _loggediN
+                      ? _buildFeatureTile(
+                          Icons.history_edu_rounded, 'Historical Data')
+                      : SizedBox(),
                 ],
               ),
+            ),
+            _loggediN == false
+                ? Center(
+                    child: Container(
+                      margin: EdgeInsets.all(1),
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                        gradient: LinearGradient(
+                          colors: [themeColor.withOpacity(0.8), themeColor],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.lock_open, // Icon for "unlocking"
+                            size: 50,
+                            color: Colors.white,
+                          ),
+                          SizedBox(height: 20),
+                          Text(
+                            'Unlock the Power of GPT BETS AI',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 20),
+                          Text(
+                            'Subscribe now to access exclusive features and insights!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 30),
+                          ElevatedButton(
+                            onPressed: () {
+                              Get.toNamed('/sub');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 15),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: Text(
+                              'Subscribe Now',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color:
+                                    themeColor, // Use the theme color for text
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : SizedBox(),
+            SizedBox(
+              height: 10,
             ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
@@ -148,38 +300,75 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildFeatureTile(IconData icon, String title) {
+  Widget _buildFeatureTile(IconData icon, String title, {Function()? onTap}) {
     return ScaleTransition(
       scale: _fadeAnimation,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Color(0xFF59A52B), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0xFF59A52B).withOpacity(0.15),
-              blurRadius: 6,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: Color(0xFF59A52B)),
-            SizedBox(height: 8),
-            Text(
-              title,
-              style: GoogleFonts.orbitron(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Color(0xFF59A52B), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0xFF59A52B).withOpacity(0.15),
+                blurRadius: 6,
+                spreadRadius: 1,
               ),
-            ),
-          ],
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: Color(0xFF59A52B)),
+              SizedBox(height: 8),
+              Text(
+                title,
+                style: GoogleFonts.orbitron(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+// Firebase logout function
+Future<void> _logout(BuildContext context) async {
+  try {
+    await FirebaseAuth.instance.signOut(); // Sign out user from Firebase
+    // After logging out, navigate to login screen
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+          builder: (_) =>
+              const LoginScreen()), // Navigate to your main screen after logout
+      ModalRoute.withName(''),
+    );
+  } catch (e) {
+    // Show an error message in case of any issue
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Error"),
+          content: Text(e.toString()),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
     );
   }
 }

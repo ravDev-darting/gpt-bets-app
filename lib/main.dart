@@ -5,6 +5,8 @@ import 'package:gptbets_sai_app/homeSc.dart';
 import 'package:gptbets_sai_app/loginPage.dart';
 import 'package:gptbets_sai_app/signUpPage.dart';
 import 'package:gptbets_sai_app/splash.dart';
+import 'package:gptbets_sai_app/sportsHub.dart';
+import 'package:gptbets_sai_app/subScreen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +28,8 @@ class MyApp extends StatelessWidget {
           GetPage(name: '/login', page: () => LoginScreen()),
           GetPage(name: '/signup', page: () => SignUpScreen()),
           GetPage(name: '/home', page: () => HomeScreen()),
+          GetPage(name: '/sub', page: () => Subscreen()),
+          GetPage(name: '/sportsHub', page: () => Sportshub()),
         ],
       ),
     );

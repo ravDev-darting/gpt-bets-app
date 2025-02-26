@@ -123,6 +123,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+            Center(
+              heightFactor: 5,
+              child: GestureDetector(
+                onTap: () => Get.toNamed('/home'),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Take a tour',
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Color(0xFF59A52B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios_outlined,
+                      color: Color(0xFF59A52B),
+                    ),
+                  ],
+                ),
+              ),
+            )
           ],
         ),
       ),
