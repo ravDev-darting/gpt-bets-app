@@ -42,11 +42,23 @@ class _SubscreenState extends State<Subscreen> {
               child: Column(
                 children: [
                   PlanCard(
+                    title: 'Weekly Plan',
+                    price: '\$9.00',
+                    features: [
+                      'GPTBETS Assistant Model.',
+                      'GPTBETS Prediction Model.',
+                      'Live Odds and insights across all Bookmakers.',
+                      'Automatic Feature Updates when new versions become available.',
+                    ],
+                    buttonText: 'BUY NOW',
+                  ),
+                  SizedBox(height: 16),
+                  PlanCard(
                     title: 'Monthly Plan',
                     price: '\$30.00',
                     features: [
-                      'CPTBETS Assistant Model.',
-                      'CPTBETS Prediction Model.',
+                      'GPTBETS Assistant Model.',
+                      'GPTBETS Prediction Model.',
                       'Live Odds and insights across all Bookmakers.',
                       'Automatic Feature Updates when new versions become available.',
                     ],

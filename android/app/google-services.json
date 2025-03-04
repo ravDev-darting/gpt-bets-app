@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "382812069444",
+    "firebase_url": "https://gptbets-sai-default-rtdb.firebaseio.com",
     "project_id": "gptbets-sai",
     "storage_bucket": "gptbets-sai.firebasestorage.app"
   },

@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:gptbets_sai_app/sportsPage.dart';
 
-class Sportshub extends StatelessWidget {
+class Sportshub extends StatefulWidget {
+  const Sportshub({super.key});
+
+  @override
+  State<Sportshub> createState() => _SportshubState();
+}
+
+class _SportshubState extends State<Sportshub> {
   final List<Map<String, dynamic>> sports = [
-    {'name': 'Football', 'icon': Icons.sports_football},
-    {'name': 'AFL', 'icon': Icons.sports_football},
-    {'name': 'Baseball', 'icon': Icons.sports_baseball},
-    {'name': 'Basketball', 'icon': Icons.sports_basketball},
-    {'name': 'Formula-1', 'icon': Icons.directions_car},
-    {'name': 'Handball', 'icon': Icons.sports_handball},
-    {'name': 'Hockey', 'icon': Icons.sports_hockey},
-    {'name': 'MMA', 'icon': Icons.sports_martial_arts},
-    {'name': 'NBA', 'icon': Icons.sports_basketball},
     {'name': 'NFL & NCAA', 'icon': Icons.sports_football},
-    {'name': 'Rugby', 'icon': Icons.sports_rugby},
-    {'name': 'Volleyball', 'icon': Icons.sports_volleyball},
+    {'name': 'NBA & NCAA', 'icon': Icons.sports_basketball},
+    {'name': 'MLB', 'icon': Icons.sports_baseball},
+    {'name': 'NASCAR & F1', 'icon': Icons.directions_car},
+    {'name': 'MMA', 'icon': Icons.sports_martial_arts},
+    {'name': 'NHL', 'icon': Icons.sports_hockey},
+    {'name': 'Soccer', 'icon': Icons.sports_soccer},
   ];
-
-  Sportshub({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +82,11 @@ class Sportshub extends StatelessWidget {
                 color: Colors.grey[850], // Dark grey card background
                 child: InkWell(
                   onTap: () {
-                    // Handle tap
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                SportsPage(sport: sports[index]['name'])));
                   },
                   borderRadius: BorderRadius.circular(20),
                   child: Container(

@@ -189,8 +189,10 @@ class _HomeScreenState extends State<HomeScreen>
                       ? _buildFeatureTile(Icons.article, 'Bets Analysis')
                       : SizedBox(),
                   _loggediN
-                      ? _buildFeatureTile(
-                          Icons.history_edu_rounded, 'Historical Data')
+                      ? _buildFeatureTile(Icons.chat_outlined, 'Chatroom',
+                          onTap: () {
+                          Get.toNamed('/chat');
+                        })
                       : SizedBox(),
                 ],
               ),
