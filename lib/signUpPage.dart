@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -27,6 +26,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _emailController.text.isNotEmpty &&
           _passwordController.text.isNotEmpty) {
         // Create user with email and password
+        // ignore: unused_local_variable
         UserCredential userCredential =
             await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),

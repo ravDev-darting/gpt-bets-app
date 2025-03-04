@@ -7,7 +7,6 @@ import 'package:gptbets_sai_app/loginPage.dart';
 import 'package:gptbets_sai_app/signUpPage.dart';
 import 'package:gptbets_sai_app/splash.dart';
 import 'package:gptbets_sai_app/sportsHub.dart';
-import 'package:gptbets_sai_app/sportsPage.dart';
 import 'package:gptbets_sai_app/subScreen.dart';
 
 final String key = 'c53e274ad03bab6946c82d64a252883a';
