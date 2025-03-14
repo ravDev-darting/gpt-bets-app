@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:gptbets_sai_app/sportsPage.dart';
 
 class Sportshub extends StatefulWidget {

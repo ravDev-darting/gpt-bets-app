@@ -44,6 +44,9 @@ dependencies:
   cloud_firestore:
   http:
   firebase_database:
+  cached_network_image:
+  webview_flutter: ^4.10.0
+  flutter_inappwebview:
 
 dev_dependencies:
   flutter_test:
