@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gptbets_sai_app/gameDetails.dart';
 import 'package:gptbets_sai_app/main.dart';
 import 'package:http/http.dart' as http;
 
@@ -21,7 +22,7 @@ class _SportsPageState extends State<SportsPage>
   String errorMessage = '';
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  DateTime selectedDate = DateTime.now(); // Added for date picker
+  DateTime selectedDate = DateTime.now();
 
   final Map<String, String> sportToEndpoint = {
     'NFL & NCAA': 'v1.american-football.api-sports.io',
@@ -40,10 +41,8 @@ class _SportsPageState extends State<SportsPage>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
+    _fadeAnimation =
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
     _controller.forward();
     _fetchRecord();
     _fetchStandings();
@@ -55,7 +54,6 @@ class _SportsPageState extends State<SportsPage>
     super.dispose();
   }
 
-  // Date picker method
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -88,8 +86,6 @@ class _SportsPageState extends State<SportsPage>
   }
 
   _fetchRecord() async {
-    print('Fetching data for ${widget.sport}...');
-
     final endpoint =
         sportToEndpoint[widget.sport] ?? 'v1.baseball.api-sports.io';
     final formattedDate =
@@ -97,7 +93,7 @@ class _SportsPageState extends State<SportsPage>
     final url = Uri.https(
       endpoint,
       '/games',
-      widget.sport.toString().contains('NBA')
+      widget.sport.contains('NBA')
           ? {'season': selectedDate.year.toString()}
           : {'date': formattedDate, 'season': selectedDate.year.toString()},
     );
@@ -109,34 +105,20 @@ class _SportsPageState extends State<SportsPage>
 
     try {
       final response = await http.get(url, headers: headers);
-      print('API Response for games: ${response.body}');
-
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        print('Parsed Data: $responseData');
-
-        if (responseData['response'] != null) {
-          setState(() {
-            latestGames = responseData['response']
-                .where((game) => game['status']?['short'] == 'FT')
-                .toList();
-            upcomingGames = responseData['response']
-                .where((game) => game['status']?['short'] != 'FT')
-                .toList();
-            isLoading = false;
-          });
-          print('Latest Games: $latestGames');
-          print('Upcoming Games: $upcomingGames');
-        } else {
-          setState(() {
-            errorMessage = 'No games found in the API response.';
-            isLoading = false;
-          });
-        }
+        setState(() {
+          latestGames = responseData['response']
+              .where((game) => game['status']?['short'] == 'FT')
+              .toList();
+          upcomingGames = responseData['response']
+              .where((game) => game['status']?['short'] != 'FT')
+              .toList();
+          isLoading = false;
+        });
       } else {
         setState(() {
-          errorMessage =
-              'Failed to load data: ${response.statusCode}\n${response.body}';
+          errorMessage = 'Failed to load data: ${response.statusCode}';
           isLoading = false;
         });
       }
@@ -151,7 +133,6 @@ class _SportsPageState extends State<SportsPage>
   _fetchStandings() async {
     final endpoint =
         sportToEndpoint[widget.sport] ?? 'v1.baseball.api-sports.io';
-
     final url = Uri.https(
       endpoint,
       '/standings',
@@ -165,28 +146,15 @@ class _SportsPageState extends State<SportsPage>
 
     try {
       final response = await http.get(url, headers: headers);
-      print('Standings API Response: ${response.body}');
-
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        print('Parsed Standings Data: $responseData');
-
-        if (responseData['response'] != null) {
-          setState(() {
-            standings = responseData['response'];
-            isLoading = false;
-          });
-          print('Standings: $standings');
-        } else {
-          setState(() {
-            errorMessage = 'No standings found in the API response.';
-            isLoading = false;
-          });
-        }
+        setState(() {
+          standings = responseData['response'];
+          isLoading = false;
+        });
       } else {
         setState(() {
-          errorMessage =
-              'Failed to load standings: ${response.statusCode}\n${response.body}';
+          errorMessage = 'Failed to load standings: ${response.statusCode}';
           isLoading = false;
         });
       }
@@ -231,9 +199,7 @@ class _SportsPageState extends State<SportsPage>
             indicatorColor: const Color(0xFF59A52B),
             indicatorWeight: 4,
             labelStyle: GoogleFonts.montserrat(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+                fontWeight: FontWeight.bold, fontSize: 16),
             unselectedLabelStyle: GoogleFonts.montserrat(fontSize: 14),
             tabs: const [
               Tab(text: 'Games'),
@@ -246,10 +212,7 @@ class _SportsPageState extends State<SportsPage>
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF59A52B),
-                Colors.grey[900]!,
-              ],
+              colors: [const Color(0xFF59A52B), Colors.grey[900]!],
             ),
           ),
           child: Column(
@@ -258,31 +221,22 @@ class _SportsPageState extends State<SportsPage>
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
                   'Selected Date: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
-                  style: GoogleFonts.montserrat(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+                  style:
+                      GoogleFonts.montserrat(color: Colors.white, fontSize: 16),
                 ),
               ),
               Expanded(
                 child: FadeTransition(
                   opacity: _fadeAnimation,
                   child: isLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                Colors.white),
-                            backgroundColor: Colors.grey[700],
-                          ),
-                        )
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.white))
                       : errorMessage.isNotEmpty
                           ? Center(
                               child: Text(
                                 errorMessage,
                                 style: GoogleFonts.roboto(
-                                  color: Colors.redAccent,
-                                  fontSize: 18,
-                                ),
+                                    color: Colors.redAccent, fontSize: 18),
                                 textAlign: TextAlign.center,
                               ),
                             )
@@ -304,7 +258,7 @@ class _SportsPageState extends State<SportsPage>
   }
 
   Widget _buildUpcomingGamesTable(BuildContext context) {
-    if (upcomingGames.isEmpty) {
+    if (upcomingGames.isEmpty && latestGames.isEmpty) {
       return Center(
         child: Text(
           'No games found.',
@@ -313,12 +267,15 @@ class _SportsPageState extends State<SportsPage>
       );
     }
 
+    final allGames = [
+      ...latestGames,
+      ...upcomingGames
+    ]; // Combine both for display
     return ListView.builder(
       padding: const EdgeInsets.all(8),
-      itemCount: upcomingGames.length,
+      itemCount: allGames.length,
       itemBuilder: (context, index) {
-        final game = upcomingGames[index];
-        print('Game: $game');
+        final game = allGames[index];
         return AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
@@ -329,8 +286,7 @@ class _SportsPageState extends State<SportsPage>
                 child: Card(
                   color: Colors.grey[850],
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                      borderRadius: BorderRadius.circular(12)),
                   elevation: 6,
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   child: ListTile(
@@ -346,10 +302,19 @@ class _SportsPageState extends State<SportsPage>
                     subtitle: Text(
                       "${game['game']['date']['date']} - ${game['game']['date']['time']}",
                       style: GoogleFonts.roboto(
-                        color: Colors.grey[300],
-                        fontSize: 14,
-                      ),
+                          color: Colors.grey[300], fontSize: 14),
                     ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MatchDetailsScreen(
+                            gameId: game['game']['id'],
+                            sport: widget.sport,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -365,64 +330,130 @@ class _SportsPageState extends State<SportsPage>
       return Center(
         child: Text(
           'No standings found.',
-          style: GoogleFonts.roboto(color: Colors.white, fontSize: 18),
+          style: GoogleFonts.poppins(
+            color: Colors.white70,
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            shadows: [
+              Shadow(
+                color: Colors.black45,
+                offset: Offset(2, 2),
+                blurRadius: 4,
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       itemCount: standings.length,
       itemBuilder: (context, index) {
         final standing = standings[index];
         return AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
-            return Transform.scale(
-              scale: 0.95 + (_controller.value * 0.05),
-              child: Opacity(
-                opacity: _controller.value,
-                child: Card(
-                  color: Colors.grey[850],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 6,
-                  margin: const EdgeInsets.symmetric(vertical: 6),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    leading: CircleAvatar(
-                      radius: 25,
-                      backgroundColor: Colors.white,
-                      backgroundImage: NetworkImage(standing['team']['logo']),
+            return Transform.translate(
+              offset: Offset(0, 20 * (1 - _controller.value)),
+              child: Transform.scale(
+                scale: 0.92 + (_controller.value * 0.08),
+                child: Opacity(
+                  opacity: 0.7 + (_controller.value * 0.3),
+                  child: Card(
+                    color: Colors.transparent,
+                    elevation: 8,
+                    shadowColor: Colors.black26,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    title: Text(
-                      standing['team']['name'],
-                      style: GoogleFonts.montserrat(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    subtitle: Text(
-                      "W: ${standing['won']} L: ${standing['lost']} T: ${standing['ties']}",
-                      style: GoogleFonts.roboto(
-                        color: Colors.grey[300],
-                        fontSize: 14,
-                      ),
-                    ),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                    child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF59A52B),
-                        borderRadius: BorderRadius.circular(8),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.grey[900]!,
+                            Colors.grey[850]!,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        "Pts: ${standing['points']['for']}",
-                        style: GoogleFonts.montserrat(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withOpacity(0.2),
+                                spreadRadius: 2,
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: CircleAvatar(
+                            radius: 28,
+                            backgroundColor: Colors.white,
+                            backgroundImage:
+                                NetworkImage(standing['team']['logo']),
+                          ),
+                        ),
+                        title: Text(
+                          standing['team']['name'],
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 19,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            children: [
+                              _buildStatChip('W', standing['won']),
+                              const SizedBox(width: 6),
+                              _buildStatChip('L', standing['lost']),
+                              const SizedBox(width: 6),
+                              _buildStatChip('T', standing['ties']),
+                            ],
+                          ),
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF59A52B), Color(0xFF468C21)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF59A52B).withOpacity(0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            "Pts: ${standing['points']['for']}",
+                            style: GoogleFonts.oswald(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -436,7 +467,27 @@ class _SportsPageState extends State<SportsPage>
     );
   }
 
+// Helper method for stat chips
+  Widget _buildStatChip(String label, int value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey[800]!.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '$label: $value',
+        style: GoogleFonts.robotoMono(
+          color: Colors.grey[200],
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSoccerStandingsTable() {
+    // Unchanged soccer standings table code
     if (standings.isEmpty) {
       return Center(
         child: Text(
@@ -497,8 +548,7 @@ class _SportsPageState extends State<SportsPage>
                           return Card(
                             color: Colors.grey[850],
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                                borderRadius: BorderRadius.circular(12)),
                             elevation: 6,
                             margin: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 5),
@@ -521,9 +571,7 @@ class _SportsPageState extends State<SportsPage>
                               subtitle: Text(
                                 "Rank: ${team['rank']} | Pts: ${team['points']} | GD: ${team['goalsDiff']}",
                                 style: GoogleFonts.roboto(
-                                  color: Colors.grey[300],
-                                  fontSize: 14,
-                                ),
+                                    color: Colors.grey[300], fontSize: 14),
                               ),
                               trailing: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -552,134 +600,6 @@ class _SportsPageState extends State<SportsPage>
           },
         );
       },
-    );
-  }
-}
-
-class GameDetailsScreen extends StatelessWidget {
-  final Map<String, dynamic> game;
-
-  const GameDetailsScreen({super.key, required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF59A52B),
-      appBar: AppBar(
-        backgroundColor: Colors.grey[900],
-        elevation: 8,
-        title: Text(
-          'Game Details',
-          style: GoogleFonts.montserrat(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
-            decoration: BoxDecoration(
-              color: Colors.grey[850],
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Matchup: ${game['teams']['home']['name']} vs ${game['teams']['away']['name']}",
-                  style: GoogleFonts.montserrat(
-                    fontSize: 24,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildDetailRow("Date:", game['game']['date']['date']),
-                _buildDetailRow("Time:", game['game']['date']['time']),
-                _buildDetailRow("Score:",
-                    "${game['scores']['home']['total']} : ${game['scores']['away']['total']}"),
-                _buildDetailRow("Status:", game['status']['long']),
-                const SizedBox(height: 20),
-                _buildDetailRow("Venue:", game['game']['venue']['name']),
-                _buildDetailRow("City:", game['game']['venue']['city']),
-                const SizedBox(height: 20),
-                Text(
-                  "Players:",
-                  style: GoogleFonts.montserrat(
-                    fontSize: 20,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Team A: Player 1, Player 2, Player 3",
-                  style: GoogleFonts.roboto(
-                    color: Colors.grey[300],
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  "Team B: Player 4, Player 5, Player 6",
-                  style: GoogleFonts.roboto(
-                    color: Colors.grey[300],
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF59A52B),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              label,
-              style: GoogleFonts.montserrat(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.roboto(
-                color: Colors.grey[300],
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
