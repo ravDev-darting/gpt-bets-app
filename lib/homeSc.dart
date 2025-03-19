@@ -21,20 +21,12 @@ class _HomeScreenState extends State<HomeScreen>
   late Animation<double> _fadeAnimation;
   bool _loggediN = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
   void _checkLoginStatus() {
     User? user = _auth.currentUser;
-
-    if (user != null) {
-      // If the user is logged in, navigate to DashScreen
-      setState(() {
-        _loggediN = true;
-      });
-    } else {
-      // If the user is not logged in, navigate to LoginScreen
-      setState(() {
-        _loggediN = false;
-      });
-    }
+    setState(() {
+      _loggediN = user != null;
+    });
   }
 
   @override
@@ -64,9 +56,7 @@ class _HomeScreenState extends State<HomeScreen>
         leading: _loggediN
             ? IconButton(
                 color: Color(0xFF59A52B),
-                onPressed: () async {
-                  await _logout(context);
-                },
+                onPressed: () => _showLogoutConfirmation(context),
                 icon: Icon(Icons.power_settings_new_outlined),
               )
             : IconButton(
@@ -74,9 +64,7 @@ class _HomeScreenState extends State<HomeScreen>
                 onPressed: () {
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            const LoginScreen()), // Navigate to your main screen after logout
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
                     ModalRoute.withName(''),
                   );
                 },
@@ -197,91 +185,86 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ),
-            _loggediN == false
-                ? Center(
-                    child: Container(
-                      margin: EdgeInsets.all(1),
-                      padding: EdgeInsets.all(20),
-                      decoration: BoxDecoration(
+            if (!_loggediN)
+              Center(
+                child: Container(
+                  margin: EdgeInsets.all(1),
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                    gradient: LinearGradient(
+                      colors: [themeColor.withOpacity(0.8), themeColor],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.lock_open,
+                        size: 50,
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            spreadRadius: 5,
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        'Unlock the Power of GPT BETS AI',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 20),
+                      Text(
+                        'Subscribe now to access exclusive features and insights!',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 30),
+                      ElevatedButton(
+                        onPressed: () {
+                          Get.toNamed('/sub');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                        ],
-                        gradient: LinearGradient(
-                          colors: [themeColor.withOpacity(0.8), themeColor],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        ),
+                        child: Text(
+                          'Subscribe Now',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: themeColor,
+                          ),
                         ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.lock_open, // Icon for "unlocking"
-                            size: 50,
-                            color: Colors.white,
-                          ),
-                          SizedBox(height: 20),
-                          Text(
-                            'Unlock the Power of GPT BETS AI',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: 20),
-                          Text(
-                            'Subscribe now to access exclusive features and insights!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: 30),
-                          ElevatedButton(
-                            onPressed: () {
-                              Get.toNamed('/sub');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 40, vertical: 15),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child: Text(
-                              'Subscribe Now',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    themeColor, // Use the theme color for text
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : SizedBox(),
-            SizedBox(
-              height: 10,
-            ),
+                    ],
+                  ),
+                ),
+              ),
+            SizedBox(height: 10),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF59A52B), // Button background color
-                foregroundColor: Colors.black, // Text and icon color
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                backgroundColor: Color(0xFF59A52B),
+                foregroundColor: Colors.black,
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -290,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen>
               icon: const Icon(
                 Icons.sports_football,
                 color: Colors.black,
-              ), // Football-like icon
+              ),
               label: const Text(
                 'Learn More',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -339,45 +322,103 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
   }
-}
 
-// Firebase logout function
-Future<void> _logout(BuildContext context) async {
-  try {
-    await FirebaseAuth.instance.signOut(); // Sign out user from Firebase
-    // After logging out, navigate to login screen
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-          builder: (_) =>
-              const LoginScreen()), // Navigate to your main screen after logout
-      ModalRoute.withName(''),
-    );
-  } catch (e) {
-    // Show an error message in case of any issue
+  // Show logout confirmation dialog
+  void _showLogoutConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Error"),
-          content: Text(e.toString()),
+          backgroundColor: Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Text(
+            'Logout',
+            style: GoogleFonts.orbitron(
+              color: Color(0xFF59A52B),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(color: Colors.white),
+          ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Close the dialog
               },
-              child: const Text("OK"),
+              child: Text(
+                'No',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close the dialog
+                await _logout(context); // Proceed with logout
+              },
+              child: Text(
+                'Yes',
+                style: TextStyle(color: Color(0xFF59A52B)),
+              ),
             ),
           ],
         );
       },
     );
   }
+
+  // Firebase logout function
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        ModalRoute.withName(''),
+      );
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: Color(0xFF1A1A1A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            title: Text(
+              'Error',
+              style: GoogleFonts.orbitron(
+                color: Color(0xFF59A52B),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              e.toString(),
+              style: TextStyle(color: Colors.white),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'OK',
+                  style: TextStyle(color: Color(0xFF59A52B)),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
 }
 
 Future<void> launchUrlExample() async {
   final Uri url = Uri.parse('https://gptbets.io/');
-
   if (await canLaunchUrl(url)) {
     await launchUrl(url, mode: LaunchMode.inAppBrowserView);
   } else {

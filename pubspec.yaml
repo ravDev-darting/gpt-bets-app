@@ -48,6 +48,7 @@ dependencies:
   webview_flutter: ^4.10.0
   flutter_inappwebview:
   responsive_framework: ^1.2.0
+  intl: ^0.17.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
