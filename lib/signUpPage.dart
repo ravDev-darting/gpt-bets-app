@@ -52,19 +52,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
 
     try {
-      // ignore: unused_local_variable
       final UserCredential userCredential =
           await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      Navigator.pop(context);
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
+      Navigator.pop(context); // Close loading dialog
+      _showSuccessDialog(); // Show success message
     } catch (e) {
       Navigator.pop(context);
       _showErrorDialog("Error during sign-up: ${e.toString().split('] ')[1]}");
@@ -167,6 +162,83 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Color(0xFF59A52B), width: 1),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                color: Color(0xFF59A52B),
+                size: 28,
+              ),
+              SizedBox(width: 10),
+              Text(
+                "Success",
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF59A52B),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            "Registration successful!\nYou'll be redirected to the login screen.",
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: Colors.white70,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF59A52B),
+                    Color(0xFF468523),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                },
+                child: Text(
+                  "OK",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          elevation: 8,
+          contentPadding: EdgeInsets.fromLTRB(24, 20, 24, 16),
+          actionsPadding: EdgeInsets.fromLTRB(0, 0, 20, 16),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -217,7 +289,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: 20), // Extra padding at bottom
+              SizedBox(height: 20),
             ],
           ),
         ),
