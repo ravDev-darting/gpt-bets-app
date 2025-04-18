@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // Add this for Firestore
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -17,7 +18,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance; // Add Firestore instance
   bool _obscureText = true;
+  bool _isLoading = false; // Add loading state
 
   Future<void> _signUp() async {
     final String firstName = _firstNameController.text.trim();
@@ -41,15 +45,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
+    setState(() {
+      _isLoading = true; // Set loading to true
+    });
 
     try {
       final UserCredential userCredential =
@@ -58,10 +56,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: password,
       );
 
-      Navigator.pop(context); // Close loading dialog
+      // Update user profile with display name
+      await userCredential.user?.updateDisplayName(firstName);
+
+      // Option 1: Save additional user details to Firestore
+      await _firestore.collection('users').doc(userCredential.user?.uid).set({
+        'firstName': firstName,
+        'email': email,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      setState(() {
+        _isLoading = false; // Set loading to false
+      });
+
       _showSuccessDialog(); // Show success message
     } catch (e) {
-      Navigator.pop(context);
+      setState(() {
+        _isLoading = false; // Set loading to false on error
+      });
       _showErrorDialog("Error during sign-up: ${e.toString().split('] ')[1]}");
     }
   }
@@ -95,25 +108,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Color(0xFF1A1A1A),
+          backgroundColor: const Color(0xFF1A1A1A),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Color(0xFF59A52B), width: 1),
+            side: const BorderSide(color: Color(0xFF9CFF33), width: 1),
           ),
           title: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.error_outline,
-                color: Color(0xFF59A52B),
+                color: Color(0xFF9CFF33),
                 size: 28,
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 "Error",
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF59A52B),
+                  color: const Color(0xFF9CFF33),
                 ),
               ),
             ],
@@ -130,9 +143,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [
-                    Color(0xFF59A52B),
+                    Color(0xFF9CFF33),
                     Color(0xFF468523),
                   ],
                   begin: Alignment.topLeft,
@@ -155,8 +168,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ],
           elevation: 8,
-          contentPadding: EdgeInsets.fromLTRB(24, 20, 24, 16),
-          actionsPadding: EdgeInsets.fromLTRB(0, 0, 20, 16),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          actionsPadding: const EdgeInsets.fromLTRB(0, 0, 20, 16),
         );
       },
     );
@@ -167,25 +180,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Color(0xFF1A1A1A),
+          backgroundColor: const Color(0xFF1A1A1A),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Color(0xFF59A52B), width: 1),
+            side: const BorderSide(color: Color(0xFF9CFF33), width: 1),
           ),
           title: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.check_circle_outline,
-                color: Color(0xFF59A52B),
+                color: Color(0xFF9CFF33),
                 size: 28,
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 "Success",
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF59A52B),
+                  color: const Color(0xFF9CFF33),
                 ),
               ),
             ],
@@ -202,9 +215,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [
-                    Color(0xFF59A52B),
+                    Color(0xFF9CFF33),
                     Color(0xFF468523),
                   ],
                   begin: Alignment.topLeft,
@@ -232,8 +245,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
             ),
           ],
           elevation: 8,
-          contentPadding: EdgeInsets.fromLTRB(24, 20, 24, 16),
-          actionsPadding: EdgeInsets.fromLTRB(0, 0, 20, 16),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          actionsPadding: const EdgeInsets.fromLTRB(0, 0, 20, 16),
         );
       },
     );
@@ -242,7 +255,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF121212),
+      backgroundColor: const Color(0xFF121212),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -257,39 +270,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     textStyle: GoogleFonts.poppins(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF59A52B),
+                      color: Color(0xFF9CFF33),
                     ),
-                    speed: Duration(milliseconds: 100),
-                  ),
+                  )
                 ],
                 totalRepeatCount: 1,
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               _buildTextField(
                   label: 'Name',
                   isPassword: false,
                   controller: _firstNameController),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               _buildTextField(
                   label: 'Email',
                   isPassword: false,
                   controller: _emailController),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               _buildPasswordTextField(),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               _buildSignUpButton(),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               TextButton(
                 onPressed: () => Get.toNamed('/login'),
-                child: Text(
+                child: const Text(
                   'Already have an account? Login',
                   style: TextStyle(
-                    color: Color(0xFF59A52B),
+                    color: Color(0xFF9CFF33),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -304,16 +316,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey),
+        labelStyle: const TextStyle(color: Colors.grey),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF59A52B)),
+          borderSide: const BorderSide(color: Color(0xFF9CFF33)),
           borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white),
+          borderSide: const BorderSide(color: Colors.white),
           borderRadius: BorderRadius.circular(12),
         ),
       ),
@@ -324,16 +336,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return TextField(
       controller: _passwordController,
       obscureText: _obscureText,
-      style: TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: 'Password',
-        labelStyle: TextStyle(color: Colors.grey),
+        labelStyle: const TextStyle(color: Colors.grey),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF59A52B)),
+          borderSide: const BorderSide(color: Color(0xFF9CFF33)),
           borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white),
+          borderSide: const BorderSide(color: Colors.white),
           borderRadius: BorderRadius.circular(12),
         ),
         suffixIcon: IconButton(
@@ -353,22 +365,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   Widget _buildSignUpButton() {
     return ElevatedButton(
-      onPressed: _signUp,
+      onPressed: _isLoading ? null : _signUp, // Disable button when loading
       style: ElevatedButton.styleFrom(
-        backgroundColor: Color(0xFF59A52B),
-        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+        backgroundColor: const Color(0xFF9CFF33),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      child: Text(
-        'Sign Up',
-        style: GoogleFonts.poppins(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.black,
-        ),
-      ),
+      child: _isLoading
+          ? const CircularProgressIndicator(color: Colors.black)
+          : Text(
+              'Sign Up',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
     );
   }
 }

@@ -64,7 +64,7 @@ class _SportsPageState extends State<SportsPage>
         return Theme(
           data: ThemeData.dark().copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF59A52B),
+              primary: Color(0xFF9CFF33),
               onPrimary: Colors.white,
               surface: Colors.grey,
               onSurface: Colors.white,
@@ -171,7 +171,7 @@ class _SportsPageState extends State<SportsPage>
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFF59A52B),
+        backgroundColor: const Color(0xFF9CFF33),
         appBar: AppBar(
           backgroundColor: Colors.grey[900],
           elevation: 8,
@@ -196,7 +196,7 @@ class _SportsPageState extends State<SportsPage>
             ),
           ],
           bottom: TabBar(
-            indicatorColor: const Color(0xFF59A52B),
+            indicatorColor: const Color(0xFF9CFF33),
             indicatorWeight: 4,
             labelStyle: GoogleFonts.montserrat(
                 fontWeight: FontWeight.bold, fontSize: 16),
@@ -212,7 +212,7 @@ class _SportsPageState extends State<SportsPage>
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [const Color(0xFF59A52B), Colors.grey[900]!],
+              colors: [const Color(0xFF9CFF33), Colors.grey[900]!],
             ),
           ),
           child: Column(
@@ -435,12 +435,12 @@ class _SportsPageState extends State<SportsPage>
                           ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF59A52B), Color(0xFF468C21)],
+                              colors: [Color(0xFF9CFF33), Color(0xFF468C21)],
                             ),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF59A52B).withOpacity(0.4),
+                                color: const Color(0xFF9CFF33).withOpacity(0.4),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -577,7 +577,7 @@ class _SportsPageState extends State<SportsPage>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF59A52B),
+                                  color: const Color(0xFF9CFF33),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(

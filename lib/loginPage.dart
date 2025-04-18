@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
@@ -16,9 +17,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   bool _obscureText = true;
+  bool _isLoading = false;
 
   Future<void> _login() async {
+    if (_isLoading) return;
+
     final String email = _emailController.text.trim();
     final String password = _passwordController.text;
 
@@ -34,60 +39,76 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
+    setState(() => _isLoading = true);
 
     try {
-      // ignore: unused_local_variable
       final UserCredential userCredential =
           await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      Navigator.pop(context);
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
-        ),
-        (route) => false,
-      );
+      // Handle user subscription status
+      await _handleUserSubscription(userCredential.user!.uid, email);
+
+      Get.offAll(() => const HomeScreen());
+    } on FirebaseAuthException catch (e) {
+      _showErrorDialog(e.message ?? "Authentication failed");
     } catch (e) {
-      Navigator.pop(context);
-      _showErrorDialog("Invalid email or password.");
+      _showErrorDialog("An unexpected error occurred");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleUserSubscription(String userId, String email) async {
+    final userRef = _firestore.collection('users').doc(userId);
+    final userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      // Create new user with default subscription
+      await userRef.set({
+        'email': email,
+        'createdAt': FieldValue.serverTimestamp(),
+        'subscription': {
+          'isActive': false,
+          'plan': 'free',
+          'expiryDate': null,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        },
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Update existing user and ensure subscription exists
+      final updateData = <String, dynamic>{
+        'lastLogin': FieldValue.serverTimestamp(),
+      };
+
+      if (!userDoc.data()!.containsKey('subscription')) {
+        updateData['subscription'] = {
+          'isActive': false,
+          'plan': 'free',
+          'expiryDate': null,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        };
+      }
+
+      if (updateData.length > 1) {
+        await userRef.update(updateData);
+      }
     }
   }
 
   bool _isEmailValid(String email) {
-    final RegExp emailRegex = RegExp(
+    return RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
-
-    if (email.isEmpty) return false;
-    if (!emailRegex.hasMatch(email)) return false;
-    if (email.length > 254) return false;
-    if (email.startsWith('.') || email.endsWith('.')) return false;
-    if (email.contains('..')) return false;
-
-    final domain = email.split('@')[1];
-    if (!domain.contains('.')) return false;
-    if (domain.startsWith('-') || domain.endsWith('-')) return false;
-
-    return true;
+    ).hasMatch(email);
   }
 
   bool _isPasswordValid(String password) {
-    final RegExp passwordRegex =
-        RegExp(r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$');
-    return passwordRegex.hasMatch(password);
+    return RegExp(
+            r'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[!@#\$&*~]).{8,}$')
+        .hasMatch(password);
   }
 
   void _showErrorDialog(String message) {
@@ -95,25 +116,25 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Color(0xFF1A1A1A),
+          backgroundColor: const Color(0xFF1A1A1A),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Color(0xFF59A52B), width: 1),
+            side: const BorderSide(color: Color(0xFF9CFF33), width: 1),
           ),
           title: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.error_outline,
-                color: Color(0xFF59A52B),
+                color: Color(0xFF9CFF33),
                 size: 28,
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text(
                 "Error",
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF59A52B),
+                  color: const Color(0xFF9CFF33),
                 ),
               ),
             ],
@@ -130,9 +151,9 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: [
-                    Color(0xFF59A52B),
+                    Color(0xFF9CFF33),
                     Color(0xFF468523),
                   ],
                   begin: Alignment.topLeft,
@@ -140,9 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               child: TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
+                onPressed: () => Navigator.of(context).pop(),
                 child: Text(
                   "OK",
                   style: GoogleFonts.poppins(
@@ -154,9 +173,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ],
-          elevation: 8,
-          contentPadding: EdgeInsets.fromLTRB(24, 20, 24, 16),
-          actionsPadding: EdgeInsets.fromLTRB(0, 0, 20, 16),
         );
       },
     );
@@ -165,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF121212),
+      backgroundColor: const Color(0xFF121212),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -180,55 +196,54 @@ class _LoginScreenState extends State<LoginScreen> {
                     textStyle: GoogleFonts.poppins(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF59A52B),
+                      color: const Color(0xFF9CFF33),
                     ),
-                    speed: Duration(milliseconds: 100),
+                    speed: const Duration(milliseconds: 100),
                   ),
                 ],
                 totalRepeatCount: 1,
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               _buildTextField(
                   label: 'Email',
                   isPassword: false,
                   controller: _emailController),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               _buildPasswordTextField(),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               _buildLoginButton(),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               TextButton(
                 onPressed: () => Get.toNamed('/signup'),
-                child: Text(
+                child: const Text(
                   'Don\'t have an account? Sign Up',
                   style: TextStyle(
-                    color: Color(0xFF59A52B),
+                    color: Color(0xFF9CFF33),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               GestureDetector(
                 onTap: () => Get.toNamed('/home'),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    const Text(
                       'Take a tour',
                       style: TextStyle(
                         fontSize: 20,
-                        color: Color(0xFF59A52B),
+                        color: Color(0xFF9CFF33),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Icon(
+                    const Icon(
                       Icons.arrow_forward_ios_outlined,
-                      color: Color(0xFF59A52B),
+                      color: Color(0xFF9CFF33),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 20), // Extra padding at bottom
             ],
           ),
         ),
@@ -236,23 +251,24 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField(
-      {required String label,
-      required bool isPassword,
-      required TextEditingController controller}) {
+  Widget _buildTextField({
+    required String label,
+    required bool isPassword,
+    required TextEditingController controller,
+  }) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey),
+        labelStyle: const TextStyle(color: Colors.grey),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF59A52B)),
+          borderSide: const BorderSide(color: Color(0xFF9CFF33)),
           borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white),
+          borderSide: const BorderSide(color: Colors.white),
           borderRadius: BorderRadius.circular(12),
         ),
       ),
@@ -263,16 +279,16 @@ class _LoginScreenState extends State<LoginScreen> {
     return TextField(
       controller: _passwordController,
       obscureText: _obscureText,
-      style: TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: 'Password',
-        labelStyle: TextStyle(color: Colors.grey),
+        labelStyle: const TextStyle(color: Colors.grey),
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF59A52B)),
+          borderSide: const BorderSide(color: Color(0xFF9CFF33)),
           borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white),
+          borderSide: const BorderSide(color: Colors.white),
           borderRadius: BorderRadius.circular(12),
         ),
         suffixIcon: IconButton(
@@ -280,11 +296,7 @@ class _LoginScreenState extends State<LoginScreen> {
             _obscureText ? Icons.visibility : Icons.visibility_off,
             color: Colors.grey,
           ),
-          onPressed: () {
-            setState(() {
-              _obscureText = !_obscureText;
-            });
-          },
+          onPressed: () => setState(() => _obscureText = !_obscureText),
         ),
       ),
     );
@@ -292,22 +304,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildLoginButton() {
     return ElevatedButton(
-      onPressed: _login,
+      onPressed: _isLoading ? null : _login,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Color(0xFF59A52B),
-        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+        backgroundColor: const Color(0xFF9CFF33),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      child: Text(
-        'Login',
-        style: GoogleFonts.poppins(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: Colors.black,
-        ),
-      ),
+      child: _isLoading
+          ? const CircularProgressIndicator(color: Colors.black)
+          : Text(
+              'Login',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
     );
   }
 }

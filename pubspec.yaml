@@ -49,6 +49,9 @@ dependencies:
   flutter_inappwebview:
   responsive_framework: ^1.2.0
   intl: ^0.17.0
+  animated_background: ^2.0.0
+  in_app_purchase: ^3.2.1
+  flutter_launcher_icons: ^0.14.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -74,6 +77,13 @@ flutter:
   assets:
     - assets/
 
+flutter_icons:
+  android: true
+  ios: true
+  image_path:
+    "assets/logoG.png"
+    # For details regarding adding images from package dependencies,
+    # see https://flutter.dev/to/image-from-package
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

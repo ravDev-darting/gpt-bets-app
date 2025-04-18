@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.us.gptbetssai"
-    compileSdk = 34
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

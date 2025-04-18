@@ -108,7 +108,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF59A52B), Color(0xFF3D7A1F)],
+              colors: [Color(0xFF9CFF33), Color(0xFF3D7A1F)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -135,7 +135,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
                   child: CircularProgressIndicator(
                     strokeWidth: 6,
                     valueColor:
-                        AlwaysStoppedAnimation<Color>(Color(0xFF59A52B)),
+                        AlwaysStoppedAnimation<Color>(Color(0xFF9CFF33)),
                   ),
                 ),
               )
@@ -205,7 +205,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF59A52B),
+              color: const Color(0xFF9CFF33),
             ),
           ),
           const SizedBox(height: 16),
@@ -225,7 +225,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
   Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, color: Color(0xFF59A52B), size: 20),
+        Icon(icon, color: Color(0xFF9CFF33), size: 20),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
@@ -261,7 +261,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
-              colors: [Color(0xFF59A52B).withOpacity(0.2), Colors.transparent],
+              colors: [Color(0xFF9CFF33).withOpacity(0.2), Colors.transparent],
             ),
           ),
           child: Hero(
@@ -298,7 +298,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
               fontWeight: FontWeight.bold,
               color: Colors.white,
               shadows: [
-                Shadow(color: Color(0xFF59A52B).withOpacity(0.3), blurRadius: 4)
+                Shadow(color: Color(0xFF9CFF33).withOpacity(0.3), blurRadius: 4)
               ],
             ),
           ),
@@ -333,7 +333,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
             style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF59A52B),
+              color: const Color(0xFF9CFF33),
             ),
           ),
           const SizedBox(height: 16),
@@ -370,7 +370,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
           ? BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Color(0xFF59A52B).withOpacity(0.2),
+                  Color(0xFF9CFF33).withOpacity(0.2),
                   Colors.transparent
                 ],
               ),
@@ -393,7 +393,7 @@ class _MatchDetailsScreenState extends State<MatchDetailsScreen>
             style: GoogleFonts.robotoMono(
               fontSize: isTotal ? 20 : 16,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-              color: isTotal ? const Color(0xFF59A52B) : Colors.white,
+              color: isTotal ? const Color(0xFF9CFF33) : Colors.white,
             ),
           ),
         ],

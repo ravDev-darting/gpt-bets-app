@@ -24,7 +24,7 @@ class _SportshubState extends State<Sportshub> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-            color: Color(0xFF59A52B), // Custom green for the icon
+            color: Color(0xFF9CFF33), // Custom green for the icon
             onPressed: () {
               Navigator.pop(context);
             },
@@ -32,13 +32,13 @@ class _SportshubState extends State<Sportshub> {
         title: Text(
           'Sports Hub',
           style: TextStyle(
-            color: Color(0xFF59A52B), // Custom green for the title
+            color: Color(0xFF9CFF33), // Custom green for the title
             fontSize: 24,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
             shadows: [
               Shadow(
-                color: Color(0xFF59A52B).withOpacity(0.8),
+                color: Color(0xFF9CFF33).withOpacity(0.8),
                 blurRadius: 10,
                 offset: Offset(0, 0),
               ),
@@ -77,7 +77,7 @@ class _SportshubState extends State<Sportshub> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                shadowColor: Color(0xFF59A52B).withOpacity(0.3),
+                shadowColor: Color(0xFF9CFF33).withOpacity(0.3),
                 color: Colors.grey[850], // Dark grey card background
                 child: InkWell(
                   onTap: () {
@@ -101,7 +101,7 @@ class _SportshubState extends State<Sportshub> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFF59A52B).withOpacity(0.3),
+                          color: Color(0xFF9CFF33).withOpacity(0.3),
                           blurRadius: 20,
                           spreadRadius: 2,
                           offset: Offset(0, 0),
@@ -125,8 +125,8 @@ class _SportshubState extends State<Sportshub> {
                                 center: Alignment.center,
                                 radius: 1.0,
                                 colors: [
-                                  Color(0xFF59A52B).withOpacity(0.9),
-                                  Color(0xFF59A52B).withOpacity(0.2),
+                                  Color(0xFF9CFF33).withOpacity(0.9),
+                                  Color(0xFF9CFF33).withOpacity(0.2),
                                 ],
                                 stops: [0.0, 1.0],
                               ).createShader(bounds);
@@ -135,7 +135,7 @@ class _SportshubState extends State<Sportshub> {
                             child: Icon(
                               sports[index]['icon'],
                               size: 56,
-                              color: Color(0xFF59A52B), // Custom green icon
+                              color: Color(0xFF9CFF33), // Custom green icon
                             ),
                           ),
                           SizedBox(height: 12),
@@ -144,12 +144,12 @@ class _SportshubState extends State<Sportshub> {
                             sports[index]['name'],
                             style: TextStyle(
                               fontSize: 20,
-                              color: Color(0xFF59A52B), // Custom green text
+                              color: Color(0xFF9CFF33), // Custom green text
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1.1,
                               shadows: [
                                 Shadow(
-                                  color: Color(0xFF59A52B).withOpacity(0.8),
+                                  color: Color(0xFF9CFF33).withOpacity(0.8),
                                   blurRadius: 10,
                                   offset: Offset(0, 0),
                                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Add Firestore
 import 'package:intl/intl.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -15,8 +16,11 @@ class ChatScreenState extends State<ChatScreen> {
   final DatabaseReference _databaseRef =
       FirebaseDatabase.instance.ref().child('messages');
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore =
+      FirebaseFirestore.instance; // Firestore instance
   final List<ChatMessageData> _messages = [];
   final ScrollController _scrollController = ScrollController();
+  final Map<String, String> _userNameCache = {}; // Cache for usernames
   bool _isLoading = true;
 
   @override
@@ -34,14 +38,17 @@ class ChatScreenState extends State<ChatScreen> {
         final messages = snapshot.snapshot.value as Map<dynamic, dynamic>;
         final List<ChatMessageData> tempMessages = [];
 
-        messages.forEach((key, value) {
-          final messageData = value as Map<dynamic, dynamic>;
+        for (var entry in messages.entries) {
+          final messageData = entry.value as Map<dynamic, dynamic>;
+          final senderId = messageData['senderId'] as String;
+          final senderName = await _getUserName(senderId); // Fetch username
           tempMessages.add(ChatMessageData(
             text: messageData['text'],
-            senderId: messageData['senderId'],
+            senderId: senderId,
+            senderName: senderName,
             timestamp: messageData['timestamp'],
           ));
-        });
+        }
 
         tempMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
         setState(() {
@@ -62,17 +69,41 @@ class ChatScreenState extends State<ChatScreen> {
         .orderByChild('timestamp')
         .startAfter(_messages.isEmpty ? 0 : _messages.last.timestamp)
         .onChildAdded
-        .listen((event) {
+        .listen((event) async {
       final messageData = event.snapshot.value as Map<dynamic, dynamic>;
+      final senderId = messageData['senderId'] as String;
+      final senderName = await _getUserName(senderId); // Fetch username
       setState(() {
         _messages.add(ChatMessageData(
           text: messageData['text'],
-          senderId: messageData['senderId'],
+          senderId: senderId,
+          senderName: senderName,
           timestamp: messageData['timestamp'],
         ));
       });
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     });
+  }
+
+  Future<String> _getUserName(String senderId) async {
+    // Check cache first
+    if (_userNameCache.containsKey(senderId)) {
+      return _userNameCache[senderId]!;
+    }
+
+    // Fetch from Firestore
+    try {
+      final doc = await _firestore.collection('users').doc(senderId).get();
+      if (doc.exists) {
+        final firstName = doc.data()?['firstName'] ?? 'Unknown';
+        _userNameCache[senderId] = firstName; // Cache the result
+        return firstName;
+      }
+    } catch (e) {
+      print('Error fetching username: $e');
+    }
+    _userNameCache[senderId] = 'Unknown'; // Cache fallback
+    return 'Unknown';
   }
 
   void _sendMessage() {
@@ -102,22 +133,14 @@ class ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.grey[900]!, Colors.black],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildAppBar(),
-              Expanded(child: _buildChatList()),
-              _buildMessageInput(),
-            ],
-          ),
+      backgroundColor: const Color(0xFF121212),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildAppBar(),
+            Expanded(child: _buildChatList()),
+            _buildMessageInput(),
+          ],
         ),
       ),
     );
@@ -126,20 +149,20 @@ class ChatScreenState extends State<ChatScreen> {
   Widget _buildAppBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.grey[850],
+      decoration: const BoxDecoration(
+        color: Colors.black,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black26,
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white70),
+            icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF9CFF33)),
             onPressed: () => Navigator.pop(context),
           ),
           Expanded(
@@ -163,10 +186,11 @@ class ChatScreenState extends State<ChatScreen> {
   Widget _buildChatList() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
+      color: const Color(0xFF121212),
       child: _isLoading
           ? Center(
               child: CircularProgressIndicator(
-                color: Colors.tealAccent[400],
+                color: const Color(0xFF9CFF33),
               ),
             )
           : ListView.builder(
@@ -185,13 +209,13 @@ class ChatScreenState extends State<ChatScreen> {
   Widget _buildMessageInput() {
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A1A1A),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black26,
             blurRadius: 10,
-            offset: const Offset(0, -2),
+            offset: Offset(0, -2),
           ),
         ],
       ),
@@ -200,7 +224,7 @@ class ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.grey[800],
+                color: Color(0xFF2A2A2A),
                 borderRadius: BorderRadius.circular(25),
               ),
               child: TextField(
@@ -208,7 +232,7 @@ class ChatScreenState extends State<ChatScreen> {
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Type your message...',
-                  hintStyle: TextStyle(color: Colors.white54),
+                  hintStyle: TextStyle(color: Colors.grey),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -224,8 +248,8 @@ class ChatScreenState extends State<ChatScreen> {
           FloatingActionButton(
             mini: true,
             onPressed: _sendMessage,
-            backgroundColor: Colors.tealAccent[400],
-            child: const Icon(Icons.send, color: Colors.black87),
+            backgroundColor: const Color(0xFF9CFF33),
+            child: const Icon(Icons.send, color: Colors.black),
           ),
         ],
       ),
@@ -243,11 +267,13 @@ class ChatScreenState extends State<ChatScreen> {
 class ChatMessageData {
   final String text;
   final String senderId;
+  final String senderName; // Add senderName field
   final int timestamp;
 
   ChatMessageData({
     required this.text,
     required this.senderId,
+    required this.senderName,
     required this.timestamp,
   });
 }
@@ -278,8 +304,8 @@ class ChatBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isMe
-                      ? [Colors.tealAccent[400]!, Colors.tealAccent[700]!]
-                      : [Colors.grey[700]!, Colors.grey[800]!],
+                      ? [const Color(0xFF9CFF33), const Color(0xFF3B731C)]
+                      : [const Color(0xFF2A2A2A), const Color(0xFF1A1A1A)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -302,6 +328,15 @@ class ChatBubble extends StatelessWidget {
                     isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
                   Text(
+                    message.senderName, // Display username
+                    style: TextStyle(
+                      color: isMe ? Colors.white70 : Colors.grey[300],
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
                     message.text,
                     style: const TextStyle(
                       color: Colors.white,
@@ -312,7 +347,7 @@ class ChatBubble extends StatelessWidget {
                   Text(
                     formattedTime,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.grey,
                       fontSize: 12,
                     ),
                   ),

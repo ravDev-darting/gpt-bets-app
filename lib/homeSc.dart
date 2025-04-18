@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -20,22 +20,44 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   bool _loggediN = false;
+  bool _isSubscribed = false;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  void _checkLoginStatus() {
+  Future<void> _checkLoginAndSubscriptionStatus() async {
     User? user = _auth.currentUser;
-    setState(() {
-      _loggediN = user != null;
-    });
+    if (user != null) {
+      setState(() {
+        _loggediN = true;
+      });
+      try {
+        DocumentSnapshot doc =
+            await _firestore.collection('users').doc(user.uid).get();
+        setState(() {
+          _isSubscribed = doc.exists &&
+              (doc.data() as Map<String, dynamic>)['isActive'] == true;
+        });
+      } catch (e) {
+        print('Error fetching subscription status: $e');
+        setState(() {
+          _isSubscribed = false;
+        });
+      }
+    } else {
+      setState(() {
+        _loggediN = false;
+        _isSubscribed = false;
+      });
+    }
   }
 
   @override
   void initState() {
     super.initState();
-    _checkLoginStatus();
+    _checkLoginAndSubscriptionStatus();
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 2),
+      duration: const Duration(seconds: 2),
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
@@ -49,18 +71,50 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final Color themeColor = Color(0xFF59A52B);
+    final Color themeColor = const Color(0xFF9CFF33);
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isSmallScreen = screenWidth < 600;
+    final bool isMediumScreen = screenWidth >= 600 && screenWidth < 900;
+    final bool isLargeScreen = screenWidth >= 900;
+
+    final double titleFontSize = isSmallScreen
+        ? 20
+        : isMediumScreen
+            ? 24
+            : 28;
+    final double subtitleFontSize = isSmallScreen
+        ? 14
+        : isMediumScreen
+            ? 16
+            : 18;
+    final double buttonFontSize = isSmallScreen
+        ? 14
+        : isMediumScreen
+            ? 16
+            : 18;
+
+    final double horizontalPadding = isSmallScreen
+        ? 16
+        : isMediumScreen
+            ? 24
+            : 32;
+    final double verticalPadding = isSmallScreen
+        ? 16
+        : isMediumScreen
+            ? 24
+            : 32;
+
     return Scaffold(
-      backgroundColor: Color(0xFF121212),
+      backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         leading: _loggediN
             ? IconButton(
-                color: Color(0xFF59A52B),
+                color: themeColor,
                 onPressed: () => _showLogoutConfirmation(context),
-                icon: Icon(Icons.power_settings_new_outlined),
+                icon: const Icon(Icons.power_settings_new_outlined),
               )
             : IconButton(
-                color: Color(0xFF59A52B),
+                color: themeColor,
                 onPressed: () {
                   Navigator.pushAndRemoveUntil(
                     context,
@@ -68,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ModalRoute.withName(''),
                   );
                 },
-                icon: Icon(Icons.arrow_back_ios),
+                icon: const Icon(Icons.arrow_back_ios),
               ),
         backgroundColor: Colors.black,
         title: FadeTransition(
@@ -76,9 +130,9 @@ class _HomeScreenState extends State<HomeScreen>
           child: Text(
             'GPT Bets AI',
             style: GoogleFonts.orbitron(
-              color: Color(0xFF59A52B),
+              color: themeColor,
               fontWeight: FontWeight.w600,
-              fontSize: 22,
+              fontSize: titleFontSize,
             ),
           ),
         ),
@@ -86,218 +140,329 @@ class _HomeScreenState extends State<HomeScreen>
         elevation: 2,
         shadowColor: Colors.transparent,
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            AnimatedTextKit(
-              animatedTexts: [
-                TypewriterAnimatedText(
-                  'AI-Powered Betting Insights',
-                  textStyle: GoogleFonts.orbitron(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF59A52B),
-                  ),
-                  speed: Duration(milliseconds: 100),
-                ),
-              ],
-              totalRepeatCount: 1,
-            ),
-            SizedBox(height: 12),
-            FadeTransition(
-              opacity: _fadeAnimation,
-              child: Text(
-                'Get data-driven betting predictions with cutting-edge AI.',
-                style: GoogleFonts.roboto(
-                  color: Colors.grey,
-                  fontSize: 14,
-                ),
-                textAlign: TextAlign.center,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: verticalPadding,
               ),
-            ),
-            SizedBox(height: 25),
-            _loggediN
-                ? ScaleTransition(
-                    scale: _fadeAnimation,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.toNamed('/predictions');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF59A52B),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 40, vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: isSmallScreen ? 8 : 16),
+                  AnimatedTextKit(
+                    animatedTexts: [
+                      TypewriterAnimatedText(
+                        'AI-Powered Betting',
+                        textStyle: GoogleFonts.orbitron(
+                          fontSize: isSmallScreen
+                              ? 22
+                              : isMediumScreen
+                                  ? 28
+                                  : 32,
+                          fontWeight: FontWeight.w600,
+                          color: themeColor,
                         ),
-                        shadowColor: Colors.transparent,
+                        speed: const Duration(milliseconds: 100),
                       ),
-                      child: Text(
-                        'View Predictions',
-                        style: GoogleFonts.orbitron(
-                          fontSize: 16,
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
+                    ],
+                    totalRepeatCount: 1,
+                  ),
+                  SizedBox(height: isSmallScreen ? 8 : 16),
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Text(
+                      'Get data-driven betting predictions with cutting-edge AI.',
+                      style: GoogleFonts.roboto(
+                        color: Colors.grey,
+                        fontSize: subtitleFontSize,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 16 : 24),
+                  if (_loggediN && _isSubscribed)
+                    ScaleTransition(
+                      scale: _fadeAnimation,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Get.toNamed('/predictions');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: themeColor,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 30 : 40,
+                            vertical: isSmallScreen ? 12 : 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          shadowColor: Colors.transparent,
+                        ),
+                        child: Text(
+                          'View Predictions',
+                          style: GoogleFonts.orbitron(
+                            fontSize: buttonFontSize,
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  )
-                : SizedBox(),
-            SizedBox(height: _loggediN ? 30 : 10),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  _buildFeatureTile(Icons.analytics, 'AI Analysis', onTap: () {
-                    _loggediN
-                        ? Get.toNamed('/predictions')
-                        : Get.snackbar(
-                            backgroundColor: Colors.white,
-                            duration: Duration(seconds: 3),
-                            colorText: Color(0xFF59A52B),
-                            'Subscribe',
-                            'Subscribe to access this feature');
-                  }),
-                  _buildFeatureTile(Icons.sports_soccer, 'Game Stats',
-                      onTap: () {
-                    _loggediN
-                        ? Get.toNamed('/sportsHub')
-                        : Get.snackbar(
-                            backgroundColor: Colors.white,
-                            duration: Duration(seconds: 3),
-                            colorText: Color(0xFF59A52B),
-                            'Subscribe',
-                            'Subscribe to access this feature');
-                  }),
-                  _loggediN
-                      ? _buildFeatureTile(Icons.article, 'Bets Analysis')
-                      : SizedBox(),
-                  _loggediN
-                      ? _buildFeatureTile(Icons.chat_outlined, 'Chatroom',
-                          onTap: () {
-                          Get.toNamed('/chat');
-                        })
-                      : SizedBox(),
+                  SizedBox(height: _loggediN ? (isSmallScreen ? 20 : 30) : 10),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final int crossAxisCount = constraints.maxWidth > 900
+                            ? 4
+                            : constraints.maxWidth > 600
+                                ? 3
+                                : 2;
+                        final double childAspectRatio = isSmallScreen
+                            ? 0.85
+                            : isMediumScreen
+                                ? 1.0
+                                : 1.1;
+                        return GridView.count(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: isSmallScreen ? 12 : 16,
+                          mainAxisSpacing: isSmallScreen ? 12 : 16,
+                          childAspectRatio: childAspectRatio,
+                          children: [
+                            _buildFeatureTile(
+                              Icons.analytics,
+                              'AI Analysis',
+                              isSmallScreen: isSmallScreen,
+                              onTap: () {
+                                if (_loggediN && _isSubscribed) {
+                                  Get.toNamed('/predictions');
+                                } else {
+                                  Get.snackbar(
+                                    backgroundColor: Colors.white,
+                                    duration: const Duration(seconds: 3),
+                                    colorText: themeColor,
+                                    'Subscribe',
+                                    'Subscribe to access this feature',
+                                  );
+                                }
+                              },
+                            ),
+                            _buildFeatureTile(
+                              Icons.sports_soccer,
+                              'Game Stats',
+                              isSmallScreen: isSmallScreen,
+                              onTap: () {
+                                if (_loggediN && _isSubscribed) {
+                                  Get.toNamed('/sportsHub');
+                                } else {
+                                  Get.snackbar(
+                                    backgroundColor: Colors.white,
+                                    duration: const Duration(seconds: 3),
+                                    colorText: themeColor,
+                                    'Subscribe',
+                                    'Subscribe to access this feature',
+                                  );
+                                }
+                              },
+                            ),
+                            if (_loggediN)
+                              _buildFeatureTile(
+                                Icons.article,
+                                'Bets Analysis',
+                                isSmallScreen: isSmallScreen,
+                                onTap: () {
+                                  if (_isSubscribed) {
+                                    Get.toNamed('/betsAnalysis');
+                                  } else {
+                                    Get.snackbar(
+                                      backgroundColor: Colors.white,
+                                      duration: const Duration(seconds: 3),
+                                      colorText: themeColor,
+                                      'Subscribe',
+                                      'Subscribe to access this feature',
+                                    );
+                                  }
+                                },
+                              ),
+                            if (_loggediN)
+                              _buildFeatureTile(
+                                Icons.chat_outlined,
+                                'Chatroom',
+                                isSmallScreen: isSmallScreen,
+                                onTap: () {
+                                  if (_isSubscribed) {
+                                    Get.toNamed('/chat');
+                                  } else {
+                                    Get.snackbar(
+                                      backgroundColor: Colors.white,
+                                      duration: const Duration(seconds: 3),
+                                      colorText: themeColor,
+                                      'Subscribe',
+                                      'Subscribe to access this feature',
+                                    );
+                                  }
+                                },
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  if (!_loggediN || (_loggediN && !_isSubscribed))
+                    Container(
+                      margin: EdgeInsets.all(isSmallScreen ? 4 : 8),
+                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 12,
+                            spreadRadius: 4,
+                          ),
+                        ],
+                        gradient: LinearGradient(
+                          colors: [themeColor.withOpacity(0.7), themeColor],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.star,
+                            size: isSmallScreen
+                                ? 40
+                                : isLargeScreen
+                                    ? 60
+                                    : 50,
+                            color: Colors.white,
+                          ),
+                          SizedBox(height: isSmallScreen ? 12 : 20),
+                          Text(
+                            _loggediN
+                                ? 'Activate Your Subscription'
+                                : 'Unlock the Power of GPT BETS AI',
+                            style: GoogleFonts.orbitron(
+                              fontSize: isSmallScreen
+                                  ? 18
+                                  : isLargeScreen
+                                      ? 28
+                                      : 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: isSmallScreen ? 12 : 20),
+                          Text(
+                            _loggediN
+                                ? 'Subscribe to access premium features and insights!'
+                                : 'Subscribe now to access exclusive features and insights!',
+                            style: GoogleFonts.roboto(
+                              fontSize: subtitleFontSize,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: isSmallScreen ? 16 : 24),
+                          ScaleTransition(
+                            scale: _fadeAnimation,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Get.toNamed('/sub');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isSmallScreen ? 30 : 40,
+                                  vertical: isSmallScreen ? 12 : 15,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                elevation: 8,
+                                shadowColor: Colors.black.withOpacity(0.3),
+                              ),
+                              icon: Icon(
+                                Icons.lock_open,
+                                color: themeColor,
+                                size: isSmallScreen ? 20 : 24,
+                              ),
+                              label: Text(
+                                'Subscribe Now',
+                                style: GoogleFonts.orbitron(
+                                  fontSize: buttonFontSize,
+                                  fontWeight: FontWeight.bold,
+                                  color: themeColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SizedBox(height: isSmallScreen ? 8 : 16),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeColor,
+                      foregroundColor: Colors.black,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 16 : 20,
+                        vertical: isSmallScreen ? 8 : 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: launchUrlExample,
+                    icon: const Icon(
+                      Icons.sports_football,
+                      color: Colors.black,
+                    ),
+                    label: Text(
+                      'Learn More',
+                      style: GoogleFonts.orbitron(
+                        fontSize: buttonFontSize,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 8 : 16),
                 ],
               ),
             ),
-            if (!_loggediN)
-              Center(
-                child: Container(
-                  margin: EdgeInsets.all(1),
-                  padding: EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                    gradient: LinearGradient(
-                      colors: [themeColor.withOpacity(0.8), themeColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.lock_open,
-                        size: 50,
-                        color: Colors.white,
-                      ),
-                      SizedBox(height: 20),
-                      Text(
-                        'Unlock the Power of GPT BETS AI',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 20),
-                      Text(
-                        'Subscribe now to access exclusive features and insights!',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 30),
-                      ElevatedButton(
-                        onPressed: () {
-                          Get.toNamed('/sub');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: Text(
-                          'Subscribe Now',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: themeColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            SizedBox(height: 10),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF59A52B),
-                foregroundColor: Colors.black,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              onPressed: launchUrlExample,
-              icon: const Icon(
-                Icons.sports_football,
-                color: Colors.black,
-              ),
-              label: const Text(
-                'Learn More',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            )
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFeatureTile(IconData icon, String title, {Function()? onTap}) {
+  Widget _buildFeatureTile(
+    IconData icon,
+    String title, {
+    required bool isSmallScreen,
+    Function()? onTap,
+  }) {
+    final double iconSize = isSmallScreen ? 32 : 40;
+    final double fontSize = isSmallScreen ? 12 : 14;
+
     return ScaleTransition(
       scale: _fadeAnimation,
       child: InkWell(
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: Color(0xFF1A1A1A),
+            color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Color(0xFF59A52B), width: 1.5),
+            border: Border.all(color: const Color(0xFF9CFF33), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Color(0xFF59A52B).withOpacity(0.15),
+                color: const Color(0xFF9CFF33).withOpacity(0.15),
                 blurRadius: 6,
                 spreadRadius: 1,
               ),
@@ -306,14 +471,22 @@ class _HomeScreenState extends State<HomeScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 40, color: Color(0xFF59A52B)),
-              SizedBox(height: 8),
-              Text(
-                title,
-                style: GoogleFonts.orbitron(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              Icon(
+                icon,
+                size: iconSize,
+                color: const Color(0xFF9CFF33),
+              ),
+              SizedBox(height: isSmallScreen ? 4 : 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  title,
+                  style: GoogleFonts.orbitron(
+                    color: Colors.white,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -323,45 +496,50 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Show logout confirmation dialog
   void _showLogoutConfirmation(BuildContext context) {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Color(0xFF1A1A1A),
+          backgroundColor: const Color(0xFF1A1A1A),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
           ),
           title: Text(
             'Logout',
             style: GoogleFonts.orbitron(
-              color: Color(0xFF59A52B),
+              color: const Color(0xFF9CFF33),
               fontWeight: FontWeight.bold,
+              fontSize: isSmallScreen ? 18 : 20,
             ),
           ),
           content: Text(
             'Are you sure you want to logout?',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(
+                color: Colors.white, fontSize: isSmallScreen ? 14 : 16),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
+                Navigator.of(context).pop();
               },
               child: Text(
                 'No',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                    color: Colors.grey, fontSize: isSmallScreen ? 14 : 16),
               ),
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop(); // Close the dialog
-                await _logout(context); // Proceed with logout
+                Navigator.of(context).pop();
+                await _logout(context);
               },
               child: Text(
                 'Yes',
-                style: TextStyle(color: Color(0xFF59A52B)),
+                style: TextStyle(
+                    color: const Color(0xFF9CFF33),
+                    fontSize: isSmallScreen ? 14 : 16),
               ),
             ),
           ],
@@ -370,8 +548,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Firebase logout function
   Future<void> _logout(BuildContext context) async {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
     try {
       await FirebaseAuth.instance.signOut();
       Navigator.pushAndRemoveUntil(
@@ -384,20 +562,22 @@ class _HomeScreenState extends State<HomeScreen>
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            backgroundColor: Color(0xFF1A1A1A),
+            backgroundColor: const Color(0xFF1A1A1A),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
             ),
             title: Text(
               'Error',
               style: GoogleFonts.orbitron(
-                color: Color(0xFF59A52B),
+                color: const Color(0xFF9CFF33),
                 fontWeight: FontWeight.bold,
+                fontSize: isSmallScreen ? 18 : 20,
               ),
             ),
             content: Text(
               e.toString(),
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(
+                  color: Colors.white, fontSize: isSmallScreen ? 14 : 16),
             ),
             actions: [
               TextButton(
@@ -406,7 +586,9 @@ class _HomeScreenState extends State<HomeScreen>
                 },
                 child: Text(
                   'OK',
-                  style: TextStyle(color: Color(0xFF59A52B)),
+                  style: TextStyle(
+                      color: const Color(0xFF9CFF33),
+                      fontSize: isSmallScreen ? 14 : 16),
                 ),
               ),
             ],

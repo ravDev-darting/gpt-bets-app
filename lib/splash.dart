@@ -11,50 +11,134 @@ class SplashScreenMain extends StatefulWidget {
   State<SplashScreenMain> createState() => _SplashScreenMainState();
 }
 
-class _SplashScreenMainState extends State<SplashScreenMain> {
+class _SplashScreenMainState extends State<SplashScreenMain>
+    with SingleTickerProviderStateMixin {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  late AnimationController _controller;
+  late Animation<double> _opacityAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize animation controller
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+
+    // Configure animations
+    _opacityAnimation =
+        Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+    ));
+
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.3, 1.0, curve: Curves.elasticOut),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
+      ),
+    );
+
+    // Start animations
+    _controller.forward();
+
+    // Check login status after animations complete
+    Timer(const Duration(seconds: 2), _checkLoginStatus);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    Timer(const Duration(seconds: 2), () {
-      _checkLoginStatus();
-    });
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/lT.png',
-                height: MediaQuery.of(context).size.height * 0.4),
-            const CircularProgressIndicator(
-              color: Color(0xFF59A52B),
-            )
+            // Logo with fade and scale animation
+            FadeTransition(
+              opacity: _opacityAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Image.asset(
+                  'assets/lT.png',
+                  height: MediaQuery.of(context).size.height * 0.4,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // Progress indicator with slide animation
+            SlideTransition(
+              position: _slideAnimation,
+              child: const CircularProgressIndicator(
+                color: Color(0xFF9CFF33),
+                strokeWidth: 3,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // Check if the user is already logged in
   void _checkLoginStatus() {
     User? user = _auth.currentUser;
 
-    // Navigate based on the login status
     if (user != null) {
-      // If the user is logged in, navigate to DashScreen
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-        ModalRoute.withName(''),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const HomeScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 800),
+        ),
+        (route) => false,
       );
     } else {
-      // If the user is not logged in, navigate to LoginScreen
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        ModalRoute.withName(''),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 800),
+        ),
+        (route) => false,
       );
     }
   }
