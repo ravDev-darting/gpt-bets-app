@@ -81,7 +81,7 @@ flutter_icons:
   android: true
   ios: true
   image_path:
-    "assets/logoG.png"
+    "assets/logo_new.png"
     # For details regarding adding images from package dependencies,
     # see https://flutter.dev/to/image-from-package
   # An image asset can refer to one or more resolution-specific "variants", see

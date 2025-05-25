@@ -374,7 +374,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
       ),
       child: _isLoading
-          ? const CircularProgressIndicator(color: Colors.black)
+          ? const CircularProgressIndicator(color: Colors.white)
           : Text(
               'Sign Up',
               style: GoogleFonts.poppins(

@@ -9,7 +9,7 @@ import 'package:gptbets_sai_app/splash.dart';
 import 'package:gptbets_sai_app/sportsHub.dart';
 import 'package:gptbets_sai_app/subScreen.dart';
 
-final String key = 'c53e274ad03bab6946c82d64a252883a';
+final String key = '02fe6e8734f74f7547654e87da0ac7e4';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -313,7 +313,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
       child: _isLoading
-          ? const CircularProgressIndicator(color: Colors.black)
+          ? const CircularProgressIndicator(color: Colors.white)
           : Text(
               'Login',
               style: GoogleFonts.poppins(

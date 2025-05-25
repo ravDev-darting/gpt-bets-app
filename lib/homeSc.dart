@@ -35,7 +35,9 @@ class _HomeScreenState extends State<HomeScreen>
             await _firestore.collection('users').doc(user.uid).get();
         setState(() {
           _isSubscribed = doc.exists &&
-              (doc.data() as Map<String, dynamic>)['isActive'] == true;
+              (doc.data() as Map<String, dynamic>)['subscription']
+                      ['isActive'] ==
+                  true;
         });
       } catch (e) {
         print('Error fetching subscription status: $e');
@@ -184,34 +186,34 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   SizedBox(height: isSmallScreen ? 16 : 24),
-                  if (_loggediN && _isSubscribed)
-                    ScaleTransition(
-                      scale: _fadeAnimation,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Get.toNamed('/predictions');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: themeColor,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isSmallScreen ? 30 : 40,
-                            vertical: isSmallScreen ? 12 : 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          shadowColor: Colors.transparent,
-                        ),
-                        child: Text(
-                          'View Predictions',
-                          style: GoogleFonts.orbitron(
-                            fontSize: buttonFontSize,
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
+                  // if (_loggediN && _isSubscribed)
+                  //   ScaleTransition(
+                  //     scale: _fadeAnimation,
+                  //     child: ElevatedButton(
+                  //       onPressed: () {
+                  //         Get.toNamed('/predictions');
+                  //       },
+                  //       style: ElevatedButton.styleFrom(
+                  //         backgroundColor: themeColor,
+                  //         padding: EdgeInsets.symmetric(
+                  //           horizontal: isSmallScreen ? 30 : 40,
+                  //           vertical: isSmallScreen ? 12 : 16,
+                  //         ),
+                  //         shape: RoundedRectangleBorder(
+                  //           borderRadius: BorderRadius.circular(15),
+                  //         ),
+                  //         shadowColor: Colors.transparent,
+                  //       ),
+                  //       child: Text(
+                  //         'View Predictions',
+                  //         style: GoogleFonts.orbitron(
+                  //           fontSize: buttonFontSize,
+                  //           color: Colors.black,
+                  //           fontWeight: FontWeight.bold,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
                   SizedBox(height: _loggediN ? (isSmallScreen ? 20 : 30) : 10),
                   Expanded(
                     child: LayoutBuilder(
@@ -238,12 +240,18 @@ class _HomeScreenState extends State<HomeScreen>
                               isSmallScreen: isSmallScreen,
                               onTap: () {
                                 if (_loggediN && _isSubscribed) {
-                                  Get.toNamed('/predictions');
+                                  Get.snackbar(
+                                    backgroundColor: Colors.white,
+                                    duration: const Duration(seconds: 3),
+                                    colorText: Colors.black,
+                                    'SOON',
+                                    'This feature is coming soon\nStay tuned!',
+                                  );
                                 } else {
                                   Get.snackbar(
                                     backgroundColor: Colors.white,
                                     duration: const Duration(seconds: 3),
-                                    colorText: themeColor,
+                                    colorText: Colors.black,
                                     'Subscribe',
                                     'Subscribe to access this feature',
                                   );
@@ -261,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   Get.snackbar(
                                     backgroundColor: Colors.white,
                                     duration: const Duration(seconds: 3),
-                                    colorText: themeColor,
+                                    colorText: Colors.black,
                                     'Subscribe',
                                     'Subscribe to access this feature',
                                   );
@@ -275,12 +283,18 @@ class _HomeScreenState extends State<HomeScreen>
                                 isSmallScreen: isSmallScreen,
                                 onTap: () {
                                   if (_isSubscribed) {
-                                    Get.toNamed('/betsAnalysis');
+                                    Get.snackbar(
+                                      backgroundColor: Colors.white,
+                                      duration: const Duration(seconds: 3),
+                                      colorText: Colors.black,
+                                      'SOON',
+                                      'This feature is coming soon\nStay tuned!',
+                                    );
                                   } else {
                                     Get.snackbar(
                                       backgroundColor: Colors.white,
                                       duration: const Duration(seconds: 3),
-                                      colorText: themeColor,
+                                      colorText: Colors.black,
                                       'Subscribe',
                                       'Subscribe to access this feature',
                                     );
@@ -299,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     Get.snackbar(
                                       backgroundColor: Colors.white,
                                       duration: const Duration(seconds: 3),
-                                      colorText: themeColor,
+                                      colorText: Colors.black,
                                       'Subscribe',
                                       'Subscribe to access this feature',
                                     );
@@ -377,7 +391,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 Get.toNamed('/sub');
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
+                                backgroundColor: Colors.black,
                                 padding: EdgeInsets.symmetric(
                                   horizontal: isSmallScreen ? 30 : 40,
                                   vertical: isSmallScreen ? 12 : 15,
