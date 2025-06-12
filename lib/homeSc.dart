@@ -388,7 +388,23 @@ class _HomeScreenState extends State<HomeScreen>
                             scale: _fadeAnimation,
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                Get.toNamed('/sub');
+                                if (_loggediN) {
+                                  Get.toNamed('/sub');
+                                } else {
+                                  Get.snackbar(
+                                    backgroundColor: Colors.white,
+                                    duration: const Duration(seconds: 3),
+                                    colorText: Colors.black,
+                                    'Login Required',
+                                    'Please log in to subscribe.',
+                                  );
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const LoginScreen()),
+                                    ModalRoute.withName(''),
+                                  );
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
