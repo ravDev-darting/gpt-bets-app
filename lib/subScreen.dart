@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -62,21 +63,62 @@ class _SubscreenState extends State<Subscreen> {
     });
   }
 
-  void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
+  // void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
+  //   for (var purchaseDetails in purchaseDetailsList) {
+  //     if (purchaseDetails.status == PurchaseStatus.pending) {
+  //       // Show loading indicator
+  //       _showSnackBar('Purchase is pending...');
+  //     } else if (purchaseDetails.status == PurchaseStatus.error) {
+  //       // Handle error
+  //       _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
+  //     } else if (purchaseDetails.status == PurchaseStatus.purchased ||
+  //         purchaseDetails.status == PurchaseStatus.restored) {
+  //       // Verify purchase (you may need server-side verification)
+  //       if (purchaseDetails.pendingCompletePurchase) {
+  //         _inAppPurchase.completePurchase(purchaseDetails);
+  //       }
+  //       _showSnackBar('Purchase successful: ${purchaseDetails.productID}');
+  //     } else if (purchaseDetails.status == PurchaseStatus.canceled) {
+  //       _showSnackBar('Purchase canceled');
+  //     }
+  //   }
+  // }
+
+//save the purchase details
+
+  void _listenToPurchaseUpdated(
+      List<PurchaseDetails> purchaseDetailsList) async {
+    final user = FirebaseAuth.instance.currentUser;
+
     for (var purchaseDetails in purchaseDetailsList) {
       if (purchaseDetails.status == PurchaseStatus.pending) {
-        // Show loading indicator
         _showSnackBar('Purchase is pending...');
       } else if (purchaseDetails.status == PurchaseStatus.error) {
-        // Handle error
         _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
-        // Verify purchase (you may need server-side verification)
         if (purchaseDetails.pendingCompletePurchase) {
-          _inAppPurchase.completePurchase(purchaseDetails);
+          await _inAppPurchase.completePurchase(purchaseDetails);
         }
+
         _showSnackBar('Purchase successful: ${purchaseDetails.productID}');
+
+        if (user != null) {
+          final userDoc =
+              FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+          await userDoc.set({
+            'subscription': {
+              'productId': purchaseDetails.productID,
+              'status': 'active',
+              'purchaseDate': purchaseDetails.transactionDate != null
+                  ? DateTime.fromMillisecondsSinceEpoch(
+                      int.tryParse(purchaseDetails.transactionDate!) ?? 0)
+                  : DateTime.now(),
+            },
+            'isActive': true,
+          }, SetOptions(merge: true));
+        }
       } else if (purchaseDetails.status == PurchaseStatus.canceled) {
         _showSnackBar('Purchase canceled');
       }
@@ -120,19 +162,19 @@ class _SubscreenState extends State<Subscreen> {
           elevation: 5,
           shadowColor: Colors.black54,
           actions: [
-            TextButton(
-              onPressed: () async {
-                await _inAppPurchase.restorePurchases();
-                _showSnackBar('Restoring purchases...');
-              },
-              child: Text(
-                'Restore',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
+            // TextButton(
+            //   onPressed: () async {
+            //     await _inAppPurchase.restorePurchases();
+            //     _showSnackBar('Restoring purchases...');
+            //   },
+            //   child: Text(
+            //     'Restore',
+            //     style: GoogleFonts.poppins(
+            //       color: Colors.white,
+            //       fontWeight: FontWeight.w500,
+            //     ),
+            //   ),
+            // ),
           ],
         ),
         body: _loading

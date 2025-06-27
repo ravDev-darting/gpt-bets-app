@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:gptbets_sai_app/chatScreen.dart';
 import 'package:gptbets_sai_app/homeSc.dart';
 import 'package:gptbets_sai_app/loginPage.dart';
+import 'package:gptbets_sai_app/profileSc.dart';
 import 'package:gptbets_sai_app/signUpPage.dart';
 import 'package:gptbets_sai_app/splash.dart';
 import 'package:gptbets_sai_app/sportsHub.dart';
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
         GetPage(name: '/sub', page: () => const Subscreen()),
         GetPage(name: '/sportsHub', page: () => const Sportshub()),
         GetPage(name: '/chat', page: () => const ChatScreen()),
+        GetPage(name: '/profile', page: () => const ProfileScreen()),
       ],
     );
   }

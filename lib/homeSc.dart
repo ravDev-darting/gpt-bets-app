@@ -236,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen>
                           children: [
                             _buildFeatureTile(
                               Icons.analytics,
-                              'AI Analysis',
+                              'GPTBETS AI Assistant',
                               isSmallScreen: isSmallScreen,
                               onTap: () {
                                 if (_loggediN && _isSubscribed) {
@@ -260,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             _buildFeatureTile(
                               Icons.sports_soccer,
-                              'Game Stats',
+                              'Sports Hub',
                               isSmallScreen: isSmallScreen,
                               onTap: () {
                                 if (_loggediN && _isSubscribed) {
@@ -278,31 +278,6 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             if (_loggediN)
                               _buildFeatureTile(
-                                Icons.article,
-                                'Bets Analysis',
-                                isSmallScreen: isSmallScreen,
-                                onTap: () {
-                                  if (_isSubscribed) {
-                                    Get.snackbar(
-                                      backgroundColor: Colors.white,
-                                      duration: const Duration(seconds: 3),
-                                      colorText: Colors.black,
-                                      'SOON',
-                                      'This feature is coming soon\nStay tuned!',
-                                    );
-                                  } else {
-                                    Get.snackbar(
-                                      backgroundColor: Colors.white,
-                                      duration: const Duration(seconds: 3),
-                                      colorText: Colors.black,
-                                      'Subscribe',
-                                      'Subscribe to access this feature',
-                                    );
-                                  }
-                                },
-                              ),
-                            if (_loggediN)
-                              _buildFeatureTile(
                                 Icons.chat_outlined,
                                 'Chatroom',
                                 isSmallScreen: isSmallScreen,
@@ -318,6 +293,15 @@ class _HomeScreenState extends State<HomeScreen>
                                       'Subscribe to access this feature',
                                     );
                                   }
+                                },
+                              ),
+                            if (_loggediN)
+                              _buildFeatureTile(
+                                Icons.account_circle_outlined,
+                                'Profile',
+                                isSmallScreen: isSmallScreen,
+                                onTap: () {
+                                  Get.toNamed('/profile');
                                 },
                               ),
                           ],
@@ -388,23 +372,7 @@ class _HomeScreenState extends State<HomeScreen>
                             scale: _fadeAnimation,
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                if (_loggediN) {
-                                  Get.toNamed('/sub');
-                                } else {
-                                  Get.snackbar(
-                                    backgroundColor: Colors.white,
-                                    duration: const Duration(seconds: 3),
-                                    colorText: Colors.black,
-                                    'Login Required',
-                                    'Please log in to subscribe.',
-                                  );
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const LoginScreen()),
-                                    ModalRoute.withName(''),
-                                  );
-                                }
+                                Get.toNamed('/sub');
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
