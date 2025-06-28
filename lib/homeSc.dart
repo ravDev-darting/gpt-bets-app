@@ -240,13 +240,7 @@ class _HomeScreenState extends State<HomeScreen>
                               isSmallScreen: isSmallScreen,
                               onTap: () {
                                 if (_loggediN && _isSubscribed) {
-                                  Get.snackbar(
-                                    backgroundColor: Colors.white,
-                                    duration: const Duration(seconds: 3),
-                                    colorText: Colors.black,
-                                    'SOON',
-                                    'This feature is coming soon\nStay tuned!',
-                                  );
+                                  Get.toNamed('/chatBot');
                                 } else {
                                   Get.snackbar(
                                     backgroundColor: Colors.white,
