@@ -101,7 +101,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     try {
       final response = await http.post(
         Uri.parse('http://192.34.60.87:8000/chatbot'),
-        headers: {'Content-Type': 'application/json'},
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=utf-8'
+        },
         body: jsonEncode({
           'user_id': userId,
           'new_message': message,
@@ -115,8 +117,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         }),
       );
 
+      final decodedBody = utf8.decode(response.bodyBytes);
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(decodedBody);
         final responseText = data['response'];
         final DateTime botTimestamp =
             DateTime.parse(data['updated_history'].last['timestamp']);
