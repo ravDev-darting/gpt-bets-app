@@ -8,11 +8,15 @@ def flutter_root
   raise 'FLUTTER_ROOT not found in Generated.xcconfig'
 end
 
-require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-flutter_ios_podfile_setup          # ***must come before any target***
+require File.expand_path(
+  File.join('packages', 'flutter_tools', 'bin', 'podhelper'),
+  flutter_root
+)
+flutter_ios_podfile_setup        # ← MUST be before any target!
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))   # correct helper
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
