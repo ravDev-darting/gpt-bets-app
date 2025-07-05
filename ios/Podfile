@@ -1,16 +1,18 @@
-platform :ios, '13.0'          # keep your bump for Firebase
+platform :ios, '13.0'
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
-# ↓↓↓  MUST be first  ↓↓↓
-require File.expand_path(
-  File.join('packages', 'flutter_tools', 'bin', 'podhelper'),
-  flutter_root
-)
-flutter_ios_podfile_setup      # loads the helper methods
+def flutter_root
+  generated = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  raise "#{generated} missing; run `flutter pub get`" unless File.exist?(generated)
+  File.foreach(generated) { |l| return l.split('=',2)[1].strip if l =~ /FLUTTER_ROOT=/ }
+  raise 'FLUTTER_ROOT not found in Generated.xcconfig'
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+flutter_ios_podfile_setup          # ***must come before any target***
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
-
-  # correct helper:
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))   # correct helper
 end
