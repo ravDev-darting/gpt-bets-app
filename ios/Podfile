@@ -1,8 +1,16 @@
-platform :ios, '13.0'
+platform :ios, '13.0'          # keep your bump for Firebase
+
+# ↓↓↓  MUST be first  ↓↓↓
+require File.expand_path(
+  File.join('packages', 'flutter_tools', 'bin', 'podhelper'),
+  flutter_root
+)
+flutter_ios_podfile_setup      # loads the helper methods
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  flutter_install_all_plugin_pods File.dirname(File.realpath(__FILE__))
+  # correct helper:
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
