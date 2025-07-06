@@ -22,6 +22,68 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   String? _animatingMessage;
   bool _isUserControllingScroll = false;
 
+  Future<void> _reportMessage(Map<String, dynamic> message) async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        String? selectedReason;
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: const Text('Report Message',
+              style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                dropdownColor: Colors.black,
+                decoration: const InputDecoration(
+                  labelText: 'Reason',
+                  labelStyle: TextStyle(color: Colors.white),
+                ),
+                items: ['Offensive', 'Spam', 'Inaccurate', 'Other']
+                    .map((r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(r,
+                              style: const TextStyle(color: Colors.white)),
+                        ))
+                    .toList(),
+                onChanged: (value) => selectedReason = value,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              onPressed: () => Navigator.pop(context),
+            ),
+            ElevatedButton(
+              child: const Text('Submit'),
+              onPressed: () {
+                if (selectedReason != null) {
+                  Navigator.pop(context, selectedReason);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (reason != null) {
+      await FirebaseFirestore.instance.collection('reports').add({
+        'reported_by': userId,
+        'message_content': message['content'],
+        'message_timestamp': message['timestamp'].toIso8601String(),
+        'reason': reason,
+        'reported_at': DateTime.now().toIso8601String(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message reported successfully')),
+      );
+    }
+  }
+
   CollectionReference get _firestore => FirebaseFirestore.instance
       .collection('chatbot_chats')
       .doc(userId)
@@ -203,26 +265,33 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   Widget _buildChatBubble(Map<String, dynamic> message) {
     final isUser = message['role'] == 'user';
 
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 280),
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isUser ? const Color(0xFF9CFF33) : Colors.grey[900],
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isUser ? 16 : 0),
-            bottomRight: Radius.circular(isUser ? 0 : 16),
+    return GestureDetector(
+      onLongPress: () {
+        if (!isUser) {
+          _reportMessage(message);
+        }
+      },
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 280),
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isUser ? const Color(0xFF9CFF33) : Colors.grey[900],
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isUser ? 16 : 0),
+              bottomRight: Radius.circular(isUser ? 0 : 16),
+            ),
           ),
-        ),
-        child: Text(
-          message['content'],
-          style: GoogleFonts.poppins(
-            color: isUser ? Colors.black : const Color(0xFF9CFF33),
-            fontSize: 15,
+          child: Text(
+            message['content'],
+            style: GoogleFonts.poppins(
+              color: isUser ? Colors.black : const Color(0xFF9CFF33),
+              fontSize: 15,
+            ),
           ),
         ),
       ),
