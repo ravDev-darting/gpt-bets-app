@@ -288,13 +288,13 @@ class _SportsPageState extends State<SportsPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  bookmaker['title'],
-                                  style: GoogleFonts.montserrat(
-                                    color: const Color(0xFF9CFF33),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                // Text(
+                                //   bookmaker['title'],
+                                //   style: GoogleFonts.montserrat(
+                                //     color: const Color(0xFF9CFF33),
+                                //     fontWeight: FontWeight.bold,
+                                //   ),
+                                // ),
                                 const SizedBox(height: 8),
                                 ...outcomes.map((outcome) {
                                   return Padding(
