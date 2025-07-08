@@ -308,7 +308,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             size: 20,
           ),
           SizedBox(width: 10),
-          Text("Bot is typing...", style: TextStyle(color: Colors.grey)),
+          Text("GPTBETS is typing...", style: TextStyle(color: Colors.grey)),
         ],
       ),
     );
