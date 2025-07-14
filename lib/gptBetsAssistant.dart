@@ -328,7 +328,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             const Icon(Icons.smart_toy, color: Color(0xFF9CFF33)),
             const SizedBox(width: 10),
             Text(
-              "Sports Bot",
+              "GPTBETS AI",
               style: GoogleFonts.poppins(
                 color: const Color(0xFF9CFF33),
                 fontWeight: FontWeight.w600,

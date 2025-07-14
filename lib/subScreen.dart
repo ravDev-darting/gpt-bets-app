@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gptbets_sai_app/homeSc.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:gptbets_sai_app/signUpPage.dart';
 import 'dart:async';
@@ -118,6 +119,22 @@ class _SubscreenState extends State<Subscreen> {
             },
             'isActive': true,
           }, SetOptions(merge: true));
+          Navigator.pushAndRemoveUntil(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  const HomeScreen(),
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+              transitionDuration: const Duration(milliseconds: 800),
+            ),
+            (route) => false,
+          );
         }
       } else if (purchaseDetails.status == PurchaseStatus.canceled) {
         _showSnackBar('Purchase canceled');

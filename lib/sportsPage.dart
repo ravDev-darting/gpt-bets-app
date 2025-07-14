@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class SportsPage extends StatefulWidget {
   final String sport;
@@ -83,10 +84,20 @@ class _SportsPageState extends State<SportsPage>
     }
   }
 
-  _fetchOdds() async {
+  Future<void> _fetchOdds() async {
     final sportKey = sportToKey[widget.sport] ?? 'americanfootball_nfl';
     final formattedDate =
-        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}T12:00:00Z";
+        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+
+    // ✅ Check internet connectivity before making request
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      setState(() {
+        errorMessage = 'No internet connection. Please check your connection.';
+        isLoading = false;
+      });
+      return;
+    }
 
     final url = Uri.https(
       'api.the-odds-api.com',
@@ -117,14 +128,12 @@ class _SportsPageState extends State<SportsPage>
         setState(() {
           errorMessage = 'Failed to load data: ${response.statusCode}';
           isLoading = false;
-          nextUpdateTime = DateTime.now().add(const Duration(minutes: 5));
         });
       }
     } catch (e) {
       setState(() {
         errorMessage = 'Error fetching data: $e';
         isLoading = false;
-        nextUpdateTime = DateTime.now().add(const Duration(minutes: 5));
       });
     }
   }
@@ -288,13 +297,6 @@ class _SportsPageState extends State<SportsPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Text(
-                                //   bookmaker['title'],
-                                //   style: GoogleFonts.montserrat(
-                                //     color: const Color(0xFF9CFF33),
-                                //     fontWeight: FontWeight.bold,
-                                //   ),
-                                // ),
                                 const SizedBox(height: 8),
                                 ...outcomes.map((outcome) {
                                   return Padding(

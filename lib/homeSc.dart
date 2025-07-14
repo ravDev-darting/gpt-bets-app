@@ -130,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen>
         title: FadeTransition(
           opacity: _fadeAnimation,
           child: Text(
-            'GPT Bets AI',
+            'GPTBETS AI',
             style: GoogleFonts.orbitron(
               color: themeColor,
               fontWeight: FontWeight.w600,
