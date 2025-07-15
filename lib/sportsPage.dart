@@ -26,10 +26,10 @@ class _SportsPageState extends State<SportsPage>
   DateTime? nextUpdateTime;
 
   final Map<String, String> sportToKey = {
-    'NFL & NCAA': 'americanfootball_nfl',
-    'NBA & NCAA': 'basketball_nba',
+    'NFL': 'americanfootball_nfl',
+    'NBA': 'basketball_nba',
     'MLB': 'baseball_mlb',
-    'NASCAR & F1': 'americanfootball_ncaaf',
+    'NCAA Basketball': 'americanfootball_ncaaf',
     'MMA': 'mma_mixed_martial_arts',
     'NHL': 'icehockey_nhl',
     'Soccer': 'soccer_epl',
@@ -79,17 +79,23 @@ class _SportsPageState extends State<SportsPage>
       setState(() {
         selectedDate = picked;
         isLoading = true;
+        errorMessage = ''; // Clear error message on new date selection
       });
       _fetchOdds();
     }
   }
 
   Future<void> _fetchOdds() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = ''; // Clear error message before retrying
+    });
+
     final sportKey = sportToKey[widget.sport] ?? 'americanfootball_nfl';
     final formattedDate =
-        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}T12:00:00Z";
 
-    // ✅ Check internet connectivity before making request
+    // Check internet connectivity before making request
     final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult == ConnectivityResult.none) {
       setState(() {
@@ -202,11 +208,73 @@ class _SportsPageState extends State<SportsPage>
                           child: CircularProgressIndicator(color: Colors.white))
                       : errorMessage.isNotEmpty
                           ? Center(
-                              child: Text(
-                                errorMessage,
-                                style: GoogleFonts.roboto(
-                                    color: Colors.redAccent, fontSize: 18),
-                                textAlign: TextAlign.center,
+                              child: Container(
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[850],
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.wifi_off,
+                                      color: Colors.redAccent,
+                                      size: 48,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Connection Error',
+                                      style: GoogleFonts.montserrat(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      errorMessage,
+                                      style: GoogleFonts.roboto(
+                                        color: Colors.white70,
+                                        fontSize: 16,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: _fetchOdds,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF9CFF33),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Retry',
+                                        style: GoogleFonts.montserrat(
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             )
                           : games.isEmpty

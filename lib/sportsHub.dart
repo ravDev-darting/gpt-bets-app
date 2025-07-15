@@ -10,8 +10,8 @@ class Sportshub extends StatefulWidget {
 
 class _SportshubState extends State<Sportshub> {
   final List<Map<String, dynamic>> sports = [
-    {'name': 'NFL & NCAA', 'icon': Icons.sports_football},
-    {'name': 'NBA & NCAA', 'icon': Icons.sports_basketball},
+    {'name': 'NFL', 'icon': Icons.sports_football},
+    {'name': 'NBA', 'icon': Icons.sports_basketball},
     {'name': 'MLB', 'icon': Icons.sports_baseball},
     {'name': 'NCAA Basketball', 'icon': Icons.sports_basketball},
     {'name': 'MMA', 'icon': Icons.sports_martial_arts},
