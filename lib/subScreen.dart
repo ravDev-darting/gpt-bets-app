@@ -112,10 +112,15 @@ class _SubscreenState extends State<Subscreen> {
             'subscription': {
               'productId': purchaseDetails.productID,
               'status': 'active',
-              'purchaseDate': purchaseDetails.transactionDate != null
-                  ? DateTime.fromMillisecondsSinceEpoch(
-                      int.tryParse(purchaseDetails.transactionDate!) ?? 0)
-                  : DateTime.now(),
+              'purchaseDate': purchaseDetails.transactionDate == null ||
+                      purchaseDetails.transactionDate!.isEmpty
+                  ? DateTime.now()
+                  : int.tryParse(purchaseDetails.transactionDate!) != null &&
+                          int.tryParse(purchaseDetails.transactionDate!)! > 0
+                      ? DateTime.fromMillisecondsSinceEpoch(
+                          int.tryParse(purchaseDetails.transactionDate!)!)
+                      : DateTime.tryParse(purchaseDetails.transactionDate!) ??
+                          DateTime.now(),
               'isActive': true,
             },
           }, SetOptions(merge: true));

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gptbets_sai_app/loginPage.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -196,8 +197,25 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      _buildField(Icons.payment, 'Plan',
-                          isActive ? 'monthly' : 'No Plan Purchased',
+                      _buildField(
+                          Icons.payment,
+                          'Plan',
+                          isActive &&
+                                  subscription['productId']
+                                      .toString()
+                                      .contains('weekly')
+                              ? 'Weekly'
+                              : isActive &&
+                                      subscription['productId']
+                                          .toString()
+                                          .contains('monthly')
+                                  ? 'Monthly'
+                                  : isActive &&
+                                          subscription['productId']
+                                              .toString()
+                                              .contains('yearly')
+                                      ? 'Yearly'
+                                      : 'No Plan Purchased',
                           valueColor: statusColor),
                       _buildField(Icons.verified_user, 'Status', status,
                           valueColor: statusColor),
@@ -205,9 +223,10 @@ class ProfileScreen extends StatelessWidget {
                         Icons.timer,
                         'Expiry Date',
                         isActive && subscription['expiryDate'] != null
-                            ? (subscription['expiryDate']?.toDate() as DateTime)
-                                .toLocal()
-                                .toString()
+                            ? DateFormat('MMMM d, yyyy').format(
+                                (subscription['expiryDate']?.toDate()
+                                        as DateTime)
+                                    .toLocal())
                             : 'N/A',
                       ),
                     ],
