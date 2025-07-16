@@ -29,7 +29,7 @@ class _SportsPageState extends State<SportsPage>
     'NFL': 'americanfootball_nfl',
     'NBA': 'basketball_nba',
     'MLB': 'baseball_mlb',
-    'NCAA Basketball': 'americanfootball_ncaaf',
+    'NCAA Football': 'americanfootball_ncaaf',
     'MMA': 'mma_mixed_martial_arts',
     'NHL': 'icehockey_nhl',
     'Soccer': 'soccer_epl',
@@ -132,13 +132,14 @@ class _SportsPageState extends State<SportsPage>
         });
       } else {
         setState(() {
-          errorMessage = 'Failed to load data: ${response.statusCode}';
+          errorMessage =
+              'No internet connection. Please check your connection.';
           isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Error fetching data: $e';
+        errorMessage = 'No internet connection. Please check your connection.';
         isLoading = false;
       });
     }
@@ -151,6 +152,7 @@ class _SportsPageState extends State<SportsPage>
       child: Scaffold(
         backgroundColor: const Color(0xFF9CFF33),
         appBar: AppBar(
+          iconTheme: const IconThemeData(color: Color(0xFF9CFF33)),
           backgroundColor: Colors.grey[900],
           elevation: 8,
           title: AnimatedBuilder(

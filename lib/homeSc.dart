@@ -158,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen>
                   AnimatedTextKit(
                     animatedTexts: [
                       TypewriterAnimatedText(
+                        cursor: '',
                         'AI-Powered Betting',
                         textStyle: GoogleFonts.orbitron(
                           fontSize: isSmallScreen
@@ -177,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen>
                   FadeTransition(
                     opacity: _fadeAnimation,
                     child: Text(
-                      'Get data-driven betting predictions with cutting-edge AI.',
+                      'AI Sports Betting Assistant\nYour sports betting coach — in your pocket.',
                       style: GoogleFonts.roboto(
                         color: Colors.grey,
                         fontSize: subtitleFontSize,
@@ -186,34 +187,6 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   SizedBox(height: isSmallScreen ? 16 : 24),
-                  // if (_loggediN && _isSubscribed)
-                  //   ScaleTransition(
-                  //     scale: _fadeAnimation,
-                  //     child: ElevatedButton(
-                  //       onPressed: () {
-                  //         Get.toNamed('/predictions');
-                  //       },
-                  //       style: ElevatedButton.styleFrom(
-                  //         backgroundColor: themeColor,
-                  //         padding: EdgeInsets.symmetric(
-                  //           horizontal: isSmallScreen ? 30 : 40,
-                  //           vertical: isSmallScreen ? 12 : 16,
-                  //         ),
-                  //         shape: RoundedRectangleBorder(
-                  //           borderRadius: BorderRadius.circular(15),
-                  //         ),
-                  //         shadowColor: Colors.transparent,
-                  //       ),
-                  //       child: Text(
-                  //         'View Predictions',
-                  //         style: GoogleFonts.orbitron(
-                  //           fontSize: buttonFontSize,
-                  //           color: Colors.black,
-                  //           fontWeight: FontWeight.bold,
-                  //         ),
-                  //       ),
-                  //     ),
-                  //   ),
                   SizedBox(height: _loggediN ? (isSmallScreen ? 20 : 30) : 10),
                   Expanded(
                     child: LayoutBuilder(
@@ -422,6 +395,49 @@ class _HomeScreenState extends State<HomeScreen>
                         fontSize: buttonFontSize,
                         fontWeight: FontWeight.bold,
                       ),
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 8 : 16),
+                  SizedBox(height: isSmallScreen ? 8 : 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0, vertical: 6.0),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withOpacity(0.7),
+                          Colors.black.withOpacity(0.5),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF9CFF33).withOpacity(0.3),
+                          blurRadius: 6.0,
+                          spreadRadius: 1.0,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'Beat the house. GPTBETS AI is your edge against the sportsbooks.',
+                      style: TextStyle(
+                        fontSize: 16.0, // Smaller font size
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF9CFF33),
+                        letterSpacing: 0.8,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.4),
+                            offset: const Offset(1, 1),
+                            blurRadius: 3.0,
+                          ),
+                        ],
+                        fontFamily: 'Roboto', // Ensure font is in pubspec.yaml
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   SizedBox(height: isSmallScreen ? 8 : 16),

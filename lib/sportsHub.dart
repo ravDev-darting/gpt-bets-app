@@ -13,7 +13,7 @@ class _SportshubState extends State<Sportshub> {
     {'name': 'NFL', 'icon': Icons.sports_football},
     {'name': 'NBA', 'icon': Icons.sports_basketball},
     {'name': 'MLB', 'icon': Icons.sports_baseball},
-    {'name': 'NCAA Basketball', 'icon': Icons.sports_basketball},
+    {'name': 'NCAA Football', 'icon': Icons.sports_football},
     {'name': 'MMA', 'icon': Icons.sports_martial_arts},
     {'name': 'NHL', 'icon': Icons.sports_hockey},
     {'name': 'Soccer', 'icon': Icons.sports_soccer},

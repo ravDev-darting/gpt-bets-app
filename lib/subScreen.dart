@@ -116,8 +116,8 @@ class _SubscreenState extends State<Subscreen> {
                   ? DateTime.fromMillisecondsSinceEpoch(
                       int.tryParse(purchaseDetails.transactionDate!) ?? 0)
                   : DateTime.now(),
+              'isActive': true,
             },
-            'isActive': true,
           }, SetOptions(merge: true));
           Navigator.pushAndRemoveUntil(
             context,
