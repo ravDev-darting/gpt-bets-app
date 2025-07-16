@@ -326,8 +326,6 @@ class ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final time = DateTime.fromMillisecondsSinceEpoch(message.timestamp);
     final formattedTime = DateFormat('HH:mm').format(time);
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    final myReaction = message.reaction[currentUserId] ?? '';
 
     final reactions = message.reaction.values.toSet().toList();
 
