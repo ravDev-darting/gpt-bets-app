@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -17,12 +18,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _messages = [];
 
-  final String userId = "test12";
+  // Use Firebase Authentication to get the current user's UID
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
   bool _isBotTyping = false;
   String? _animatingMessage;
   bool _isUserControllingScroll = false;
 
   Future<void> _reportMessage(Map<String, dynamic> message) async {
+    if (userId == null) return;
+
     final reason = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -92,25 +96,34 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   @override
   void initState() {
     super.initState();
-    _loadChatHistory();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        _scrollToBottom();
+    if (userId == null) {
+      // Redirect to login if user is not authenticated
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/login');
       });
-    });
+    } else {
+      _loadChatHistory();
 
-    _scrollController.addListener(() {
-      if (_scrollController.offset !=
-          _scrollController.position.maxScrollExtent) {
-        _isUserControllingScroll = true;
-      } else {
-        _isUserControllingScroll = false;
-      }
-    });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          _scrollToBottom();
+        });
+      });
+
+      _scrollController.addListener(() {
+        if (_scrollController.offset !=
+            _scrollController.position.maxScrollExtent) {
+          _isUserControllingScroll = true;
+        } else {
+          _isUserControllingScroll = false;
+        }
+      });
+    }
   }
 
   Future<void> _loadChatHistory() async {
+    if (userId == null) return;
+
     final snapshot =
         await _firestore.orderBy('timestamp', descending: false).get();
 
@@ -137,7 +150,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   }
 
   Future<void> _sendMessage(String message) async {
-    if (message.trim().isEmpty) return;
+    if (message.trim().isEmpty || userId == null) return;
 
     final now = DateTime.now();
     final userMessage = {
@@ -316,10 +329,18 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (userId == null) {
+      // Show a loading indicator while redirecting to login
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFF101010),
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Color(0xFF9CFF33)),
         backgroundColor: Colors.black,
         centerTitle: true,
         title: Row(
