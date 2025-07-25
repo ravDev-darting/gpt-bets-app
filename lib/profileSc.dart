@@ -70,6 +70,55 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  void _showDeleteConfirmation(BuildContext context) {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Text(
+            'Delete Account',
+            style: GoogleFonts.orbitron(
+              color: Colors.redAccent,
+              fontWeight: FontWeight.bold,
+              fontSize: isSmallScreen ? 18 : 20,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to permanently delete your account? This action cannot be undone.',
+            style: TextStyle(
+                color: Colors.white, fontSize: isSmallScreen ? 14 : 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                    color: Colors.grey, fontSize: isSmallScreen ? 14 : 16),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _deleteAccount(context);
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(
+                    color: Colors.redAccent, fontSize: isSmallScreen ? 14 : 16),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _logout(BuildContext context) async {
     final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
     try {
@@ -111,6 +160,101 @@ class ProfileScreen extends StatelessWidget {
                   style: TextStyle(
                       color: const Color(0xFF9CFF33),
                       fontSize: isSmallScreen ? 14 : 16),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  Future<void> _deleteAccount(BuildContext context) async {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) return;
+
+    // Store the navigator context to ensure it's valid for popping the dialog
+    final navigator = Navigator.of(context);
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing while loading
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          content: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              CircularProgressIndicator(color: Color(0xFF9CFF33)),
+              SizedBox(width: 16),
+              Text(
+                'Deleting Account...',
+                style: TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      // Delete Firestore data
+      await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+
+      // Delete FirebaseAuth user
+      await FirebaseAuth.instance.currentUser!.delete();
+
+      // Close the loading dialog
+      navigator.pop();
+
+      // Navigate to LoginScreen
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      // Close the loading dialog
+      navigator.pop();
+
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            title: Text(
+              'Error',
+              style: GoogleFonts.orbitron(
+                color: const Color(0xFF9CFF33),
+                fontWeight: FontWeight.bold,
+                fontSize: isSmallScreen ? 18 : 20,
+              ),
+            ),
+            content: Text(
+              e.toString(),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isSmallScreen ? 14 : 16,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'OK',
+                  style: TextStyle(
+                    color: const Color(0xFF9CFF33),
+                    fontSize: isSmallScreen ? 14 : 16,
+                  ),
                 ),
               ),
             ],
@@ -248,6 +392,28 @@ class ProfileScreen extends StatelessWidget {
                     backgroundColor: const Color(0xFF9CFF33),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 10,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Delete Account Button
+                ElevatedButton.icon(
+                  onPressed: () => _showDeleteConfirmation(context),
+                  icon: const Icon(Icons.delete_forever, color: Colors.white),
+                  label: const Text(
+                    'Delete Account',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 28, vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),

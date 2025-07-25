@@ -108,22 +108,49 @@ class _SubscreenState extends State<Subscreen> {
           final userDoc =
               FirebaseFirestore.instance.collection('users').doc(user.uid);
 
+          // Get the purchase date
+          DateTime purchaseDate = DateTime.now();
+          if (purchaseDetails.transactionDate != null) {
+            int? timestamp = int.tryParse(purchaseDetails.transactionDate!);
+            if (timestamp != null && timestamp > 0) {
+              purchaseDate = DateTime.fromMillisecondsSinceEpoch(timestamp);
+            } else {
+              purchaseDate =
+                  DateTime.tryParse(purchaseDetails.transactionDate!) ??
+                      DateTime.now();
+            }
+          }
+
+          // Calculate expiry date based on product ID
+          DateTime expiryDate;
+          switch (purchaseDetails.productID) {
+            case 'weekly_plan':
+              expiryDate = purchaseDate.add(Duration(days: 7));
+              break;
+            case 'monthly_plan':
+              expiryDate = DateTime(
+                  purchaseDate.year, purchaseDate.month + 1, purchaseDate.day);
+              break;
+            case 'yearly_plan':
+              expiryDate = DateTime(
+                  purchaseDate.year + 1, purchaseDate.month, purchaseDate.day);
+              break;
+            default:
+              expiryDate = purchaseDate;
+          }
+
+          // Save data to Firestore
           await userDoc.set({
             'subscription': {
               'productId': purchaseDetails.productID,
               'status': 'active',
-              'purchaseDate': purchaseDetails.transactionDate == null ||
-                      purchaseDetails.transactionDate!.isEmpty
-                  ? DateTime.now()
-                  : int.tryParse(purchaseDetails.transactionDate!) != null &&
-                          int.tryParse(purchaseDetails.transactionDate!)! > 0
-                      ? DateTime.fromMillisecondsSinceEpoch(
-                          int.tryParse(purchaseDetails.transactionDate!)!)
-                      : DateTime.tryParse(purchaseDetails.transactionDate!) ??
-                          DateTime.now(),
+              'purchaseDate': purchaseDate,
+              'expiryDate': expiryDate,
               'isActive': true,
             },
           }, SetOptions(merge: true));
+
+          // Navigate to home screen
           Navigator.pushAndRemoveUntil(
             context,
             PageRouteBuilder(
@@ -131,10 +158,7 @@ class _SubscreenState extends State<Subscreen> {
                   const HomeScreen(),
               transitionsBuilder:
                   (context, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: child,
-                );
+                return FadeTransition(opacity: animation, child: child);
               },
               transitionDuration: const Duration(milliseconds: 800),
             ),

@@ -24,21 +24,89 @@ class _HomeScreenState extends State<HomeScreen>
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Future<void> _checkLoginAndSubscriptionStatus() async {
+  //   User? user = _auth.currentUser;
+  //   if (user != null) {
+  //     setState(() {
+  //       _loggediN = true;
+  //     });
+  //     try {
+  //       DocumentSnapshot doc =
+  //           await _firestore.collection('users').doc(user.uid).get();
+  //       setState(() {
+  //         _isSubscribed = doc.exists &&
+  //             (doc.data() as Map<String, dynamic>)['subscription']
+  //                     ['isActive'] ==
+  //                 true;
+  //       });
+  //     } catch (e) {
+  //       print('Error fetching subscription status: $e');
+  //       setState(() {
+  //         _isSubscribed = false;
+  //       });
+  //     }
+  //   } else {
+  //     setState(() {
+  //       _loggediN = false;
+  //       _isSubscribed = false;
+  //     });
+  //   }
+  // }
+
   Future<void> _checkLoginAndSubscriptionStatus() async {
     User? user = _auth.currentUser;
     if (user != null) {
       setState(() {
         _loggediN = true;
       });
+
       try {
         DocumentSnapshot doc =
             await _firestore.collection('users').doc(user.uid).get();
-        setState(() {
-          _isSubscribed = doc.exists &&
-              (doc.data() as Map<String, dynamic>)['subscription']
-                      ['isActive'] ==
-                  true;
-        });
+
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          final subscription = data['subscription'];
+
+          if (subscription != null && subscription['isActive'] == true) {
+            DateTime now = DateTime.now();
+            DateTime? expiryDate;
+
+            if (subscription['expiryDate'] != null) {
+              if (subscription['expiryDate'] is Timestamp) {
+                expiryDate = (subscription['expiryDate'] as Timestamp).toDate();
+              } else if (subscription['expiryDate'] is String) {
+                expiryDate = DateTime.tryParse(subscription['expiryDate']);
+              }
+            }
+
+            // Check expiry
+            if (expiryDate != null && now.isBefore(expiryDate)) {
+              setState(() {
+                _isSubscribed = true;
+              });
+            } else {
+              // Expired - update Firestore
+              await _firestore.collection('users').doc(user.uid).set({
+                'subscription': {
+                  'isActive': false,
+                }
+              }, SetOptions(merge: true));
+
+              setState(() {
+                _isSubscribed = false;
+              });
+            }
+          } else {
+            setState(() {
+              _isSubscribed = false;
+            });
+          }
+        } else {
+          setState(() {
+            _isSubscribed = false;
+          });
+        }
       } catch (e) {
         print('Error fetching subscription status: $e');
         setState(() {
