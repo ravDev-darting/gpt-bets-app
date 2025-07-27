@@ -28,6 +28,7 @@ class _SubscreenState extends State<Subscreen> {
   }
 
   Future<void> _initializeInAppPurchase() async {
+    // Check if in-app purchase is available
     final bool isAvailable = await _inAppPurchase.isAvailable();
     if (!isAvailable) {
       setState(() {
@@ -37,12 +38,14 @@ class _SubscreenState extends State<Subscreen> {
       return;
     }
 
+    // Set up purchase stream listener
     _subscription = _inAppPurchase.purchaseStream.listen(
       _listenToPurchaseUpdated,
       onDone: () => _subscription?.cancel(),
       onError: (error) => print('Purchase stream error: $error'),
     );
 
+    // Fetch product details
     const Set<String> productIds = {
       'weekly_plan',
       'monthly_plan',
@@ -61,27 +64,34 @@ class _SubscreenState extends State<Subscreen> {
     });
   }
 
+//save the purchase details
+
   void _listenToPurchaseUpdated(
       List<PurchaseDetails> purchaseDetailsList) async {
     final user = FirebaseAuth.instance.currentUser;
-    final DateTime now = DateTime.now();
 
     for (var purchaseDetails in purchaseDetailsList) {
-      if (purchaseDetails.status == PurchaseStatus.restored ||
-          purchaseDetails.status == PurchaseStatus.purchased) {
-        if (!purchaseDetails.pendingCompletePurchase) {
-          debugPrint('Ignoring old completed purchase');
-          continue;
+      if (purchaseDetails.status == PurchaseStatus.pending) {
+        _showSnackBar('Purchase is pending...');
+      } else if (purchaseDetails.status == PurchaseStatus.error) {
+        _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
+      } else if (purchaseDetails.status == PurchaseStatus.purchased ||
+          purchaseDetails.status == PurchaseStatus.restored) {
+        if (purchaseDetails.pendingCompletePurchase) {
+          await _inAppPurchase.completePurchase(purchaseDetails);
         }
 
-        await _inAppPurchase.completePurchase(purchaseDetails);
         _showSnackBar('Purchase successful: ${purchaseDetails.productID}');
 
         if (user != null) {
           final userDoc =
               FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+//the code to check purchase details and save to firestore after bug
+// Save the current time instead of transactionDate
           DateTime purchaseDate = DateTime.now();
 
+// Calculate expiry
           DateTime expiryDate;
           switch (purchaseDetails.productID) {
             case 'weekly_plan':
@@ -99,60 +109,18 @@ class _SubscreenState extends State<Subscreen> {
               expiryDate = purchaseDate;
           }
 
-          // Check if the subscription is expired and reset if necessary
-          final docSnapshot = await userDoc.get();
-          if (docSnapshot.exists) {
-            final data = docSnapshot.data();
-            if (data?['subscription'] != null) {
-              final subscriptionData = data!['subscription'];
-              final existingExpiryDate =
-                  (subscriptionData['expiryDate'] as Timestamp).toDate();
-              if (existingExpiryDate.isBefore(now) &&
-                  subscriptionData['productId'] == purchaseDetails.productID) {
-                // Reset subscription data for expired plan
-                await userDoc.update({
-                  'subscription': {
-                    'productId': purchaseDetails.productID,
-                    'status': 'active',
-                    'purchaseDate': purchaseDate,
-                    'expiryDate': expiryDate,
-                    'isActive': true,
-                  },
-                });
-              } else {
-                await userDoc.set({
-                  'subscription': {
-                    'productId': purchaseDetails.productID,
-                    'status': 'active',
-                    'purchaseDate': purchaseDate,
-                    'expiryDate': expiryDate,
-                    'isActive': true,
-                  },
-                }, SetOptions(merge: true));
-              }
-            } else {
-              await userDoc.set({
-                'subscription': {
-                  'productId': purchaseDetails.productID,
-                  'status': 'active',
-                  'purchaseDate': purchaseDate,
-                  'expiryDate': expiryDate,
-                  'isActive': true,
-                },
-              }, SetOptions(merge: true));
-            }
-          } else {
-            await userDoc.set({
-              'subscription': {
-                'productId': purchaseDetails.productID,
-                'status': 'active',
-                'purchaseDate': purchaseDate,
-                'expiryDate': expiryDate,
-                'isActive': true,
-              },
-            });
-          }
+// Save to Firestore
+          await userDoc.set({
+            'subscription': {
+              'productId': purchaseDetails.productID,
+              'status': 'active',
+              'purchaseDate': purchaseDate,
+              'expiryDate': expiryDate,
+              'isActive': true,
+            },
+          }, SetOptions(merge: true));
 
+          // Navigate to home screen
           Navigator.pushAndRemoveUntil(
             context,
             PageRouteBuilder(
@@ -167,10 +135,6 @@ class _SubscreenState extends State<Subscreen> {
             (route) => false,
           );
         }
-      } else if (purchaseDetails.status == PurchaseStatus.pending) {
-        _showSnackBar('Purchase is pending...');
-      } else if (purchaseDetails.status == PurchaseStatus.error) {
-        _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
       } else if (purchaseDetails.status == PurchaseStatus.canceled) {
         _showSnackBar('Purchase canceled');
       }
@@ -213,7 +177,21 @@ class _SubscreenState extends State<Subscreen> {
           centerTitle: true,
           elevation: 5,
           shadowColor: Colors.black54,
-          actions: [],
+          actions: [
+            // TextButton(
+            //   onPressed: () async {
+            //     await _inAppPurchase.restorePurchases();
+            //     _showSnackBar('Restoring purchases...');
+            //   },
+            //   child: Text(
+            //     'Restore',
+            //     style: GoogleFonts.poppins(
+            //       color: Colors.white,
+            //       fontWeight: FontWeight.w500,
+            //     ),
+            //   ),
+            // ),
+          ],
         ),
         body: _loading
             ? Center(child: CircularProgressIndicator())
@@ -288,6 +266,7 @@ class _SubscreenState extends State<Subscreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
+      // User is not logged in, show dialog
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -316,7 +295,7 @@ class _SubscreenState extends State<Subscreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.pop(context); // Close dialog
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => SignUpScreen()),
@@ -349,11 +328,13 @@ class _SubscreenState extends State<Subscreen> {
       return;
     }
 
+    // Find the product
     final product = _products.firstWhere(
       (p) => p.id == productId,
       orElse: () => throw Exception('Product not found'),
     );
 
+    // Initiate purchase
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
     await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
   }
