@@ -28,7 +28,6 @@ class _SubscreenState extends State<Subscreen> {
   }
 
   Future<void> _initializeInAppPurchase() async {
-    // Check if in-app purchase is available
     final bool isAvailable = await _inAppPurchase.isAvailable();
     if (!isAvailable) {
       setState(() {
@@ -38,14 +37,12 @@ class _SubscreenState extends State<Subscreen> {
       return;
     }
 
-    // Set up purchase stream listener
     _subscription = _inAppPurchase.purchaseStream.listen(
       _listenToPurchaseUpdated,
       onDone: () => _subscription?.cancel(),
       onError: (error) => print('Purchase stream error: $error'),
     );
 
-    // Fetch product details
     const Set<String> productIds = {
       'weekly_plan',
       'monthly_plan',
@@ -64,157 +61,14 @@ class _SubscreenState extends State<Subscreen> {
     });
   }
 
-  // void _listenToPurchaseUpdated(List<PurchaseDetails> purchaseDetailsList) {
-  //   for (var purchaseDetails in purchaseDetailsList) {
-  //     if (purchaseDetails.status == PurchaseStatus.pending) {
-  //       // Show loading indicator
-  //       _showSnackBar('Purchase is pending...');
-  //     } else if (purchaseDetails.status == PurchaseStatus.error) {
-  //       // Handle error
-  //       _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
-  //     } else if (purchaseDetails.status == PurchaseStatus.purchased ||
-  //         purchaseDetails.status == PurchaseStatus.restored) {
-  //       // Verify purchase (you may need server-side verification)
-  //       if (purchaseDetails.pendingCompletePurchase) {
-  //         _inAppPurchase.completePurchase(purchaseDetails);
-  //       }
-  //       _showSnackBar('Purchase successful: ${purchaseDetails.productID}');
-  //     } else if (purchaseDetails.status == PurchaseStatus.canceled) {
-  //       _showSnackBar('Purchase canceled');
-  //     }
-  //   }
-  // }
-
-//save the purchase details
-
-//   void _listenToPurchaseUpdated(
-//       List<PurchaseDetails> purchaseDetailsList) async {
-//     final user = FirebaseAuth.instance.currentUser;
-
-//     for (var purchaseDetails in purchaseDetailsList) {
-//       if (purchaseDetails.status == PurchaseStatus.pending) {
-//         _showSnackBar('Purchase is pending...');
-//       } else if (purchaseDetails.status == PurchaseStatus.error) {
-//         _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
-//       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
-//           purchaseDetails.status == PurchaseStatus.restored) {
-//         if (purchaseDetails.pendingCompletePurchase) {
-//           await _inAppPurchase.completePurchase(purchaseDetails);
-//         }
-
-//         _showSnackBar('Purchase successful: ${purchaseDetails.productID}');
-
-//         if (user != null) {
-//           final userDoc =
-//               FirebaseFirestore.instance.collection('users').doc(user.uid);
-
-//           // Get the purchase date
-//           // DateTime purchaseDate = DateTime.now();
-//           // if (purchaseDetails.transactionDate != null) {
-//           //   int? timestamp = int.tryParse(purchaseDetails.transactionDate!);
-//           //   if (timestamp != null && timestamp > 0) {
-//           //     purchaseDate = DateTime.fromMillisecondsSinceEpoch(timestamp);
-//           //   } else {
-//           //     purchaseDate =
-//           //         DateTime.tryParse(purchaseDetails.transactionDate!) ??
-//           //             DateTime.now();
-//           //   }
-//           // }
-
-//           // // Calculate expiry date based on product ID
-//           // DateTime expiryDate;
-//           // switch (purchaseDetails.productID) {
-//           //   case 'weekly_plan':
-//           //     expiryDate = purchaseDate.add(Duration(days: 7));
-//           //     break;
-//           //   case 'monthly_plan':
-//           //     expiryDate = DateTime(
-//           //         purchaseDate.year, purchaseDate.month + 1, purchaseDate.day);
-//           //     break;
-//           //   case 'yearly_plan':
-//           //     expiryDate = DateTime(
-//           //         purchaseDate.year + 1, purchaseDate.month, purchaseDate.day);
-//           //     break;
-//           //   default:
-//           //     expiryDate = purchaseDate;
-//           // }
-
-//           // // Save data to Firestore
-//           // await userDoc.set({
-//           //   'subscription': {
-//           //     'productId': purchaseDetails.productID,
-//           //     'status': 'active',
-//           //     'purchaseDate': purchaseDate,
-//           //     'expiryDate': expiryDate,
-//           //     'isActive': true,
-//           //   },
-//           // }, SetOptions(merge: true));
-
-// //the code to check purchase details and save to firestore after bug
-// // Save the current time instead of transactionDate
-//           DateTime purchaseDate = DateTime.now();
-
-// // Calculate expiry
-//           DateTime expiryDate;
-//           switch (purchaseDetails.productID) {
-//             case 'weekly_plan':
-//               expiryDate = purchaseDate.add(Duration(days: 7));
-//               break;
-//             case 'monthly_plan':
-//               expiryDate = DateTime(
-//                   purchaseDate.year, purchaseDate.month + 1, purchaseDate.day);
-//               break;
-//             case 'yearly_plan':
-//               expiryDate = DateTime(
-//                   purchaseDate.year + 1, purchaseDate.month, purchaseDate.day);
-//               break;
-//             default:
-//               expiryDate = purchaseDate;
-//           }
-
-// // Save to Firestore
-//           await userDoc.set({
-//             'subscription': {
-//               'productId': purchaseDetails.productID,
-//               'status': 'active',
-//               'purchaseDate': purchaseDate,
-//               'expiryDate': expiryDate,
-//               'isActive': true,
-//             },
-//           }, SetOptions(merge: true));
-
-//           // Navigate to home screen
-//           Navigator.pushAndRemoveUntil(
-//             context,
-//             PageRouteBuilder(
-//               pageBuilder: (context, animation, secondaryAnimation) =>
-//                   const HomeScreen(),
-//               transitionsBuilder:
-//                   (context, animation, secondaryAnimation, child) {
-//                 return FadeTransition(opacity: animation, child: child);
-//               },
-//               transitionDuration: const Duration(milliseconds: 800),
-//             ),
-//             (route) => false,
-//           );
-//         }
-//       } else if (purchaseDetails.status == PurchaseStatus.canceled) {
-//         _showSnackBar('Purchase canceled');
-//       }
-//     }
-//   }
-
-//code to fix auto purchase and save to firestore
-
   void _listenToPurchaseUpdated(
       List<PurchaseDetails> purchaseDetailsList) async {
     final user = FirebaseAuth.instance.currentUser;
+    final DateTime now = DateTime.now();
 
     for (var purchaseDetails in purchaseDetailsList) {
-      // Skip if it's a restored or past purchase without user-initiated restore
       if (purchaseDetails.status == PurchaseStatus.restored ||
           purchaseDetails.status == PurchaseStatus.purchased) {
-        // Make sure this is not from an old session auto-replayed
         if (!purchaseDetails.pendingCompletePurchase) {
           debugPrint('Ignoring old completed purchase');
           continue;
@@ -245,17 +99,60 @@ class _SubscreenState extends State<Subscreen> {
               expiryDate = purchaseDate;
           }
 
-          await userDoc.set({
-            'subscription': {
-              'productId': purchaseDetails.productID,
-              'status': 'active',
-              'purchaseDate': purchaseDate,
-              'expiryDate': expiryDate,
-              'isActive': true,
-            },
-          }, SetOptions(merge: true));
+          // Check if the subscription is expired and reset if necessary
+          final docSnapshot = await userDoc.get();
+          if (docSnapshot.exists) {
+            final data = docSnapshot.data();
+            if (data?['subscription'] != null) {
+              final subscriptionData = data!['subscription'];
+              final existingExpiryDate =
+                  (subscriptionData['expiryDate'] as Timestamp).toDate();
+              if (existingExpiryDate.isBefore(now) &&
+                  subscriptionData['productId'] == purchaseDetails.productID) {
+                // Reset subscription data for expired plan
+                await userDoc.update({
+                  'subscription': {
+                    'productId': purchaseDetails.productID,
+                    'status': 'active',
+                    'purchaseDate': purchaseDate,
+                    'expiryDate': expiryDate,
+                    'isActive': true,
+                  },
+                });
+              } else {
+                await userDoc.set({
+                  'subscription': {
+                    'productId': purchaseDetails.productID,
+                    'status': 'active',
+                    'purchaseDate': purchaseDate,
+                    'expiryDate': expiryDate,
+                    'isActive': true,
+                  },
+                }, SetOptions(merge: true));
+              }
+            } else {
+              await userDoc.set({
+                'subscription': {
+                  'productId': purchaseDetails.productID,
+                  'status': 'active',
+                  'purchaseDate': purchaseDate,
+                  'expiryDate': expiryDate,
+                  'isActive': true,
+                },
+              }, SetOptions(merge: true));
+            }
+          } else {
+            await userDoc.set({
+              'subscription': {
+                'productId': purchaseDetails.productID,
+                'status': 'active',
+                'purchaseDate': purchaseDate,
+                'expiryDate': expiryDate,
+                'isActive': true,
+              },
+            });
+          }
 
-          // Navigate to home screen
           Navigator.pushAndRemoveUntil(
             context,
             PageRouteBuilder(
@@ -316,21 +213,7 @@ class _SubscreenState extends State<Subscreen> {
           centerTitle: true,
           elevation: 5,
           shadowColor: Colors.black54,
-          actions: [
-            // TextButton(
-            //   onPressed: () async {
-            //     await _inAppPurchase.restorePurchases();
-            //     _showSnackBar('Restoring purchases...');
-            //   },
-            //   child: Text(
-            //     'Restore',
-            //     style: GoogleFonts.poppins(
-            //       color: Colors.white,
-            //       fontWeight: FontWeight.w500,
-            //     ),
-            //   ),
-            // ),
-          ],
+          actions: [],
         ),
         body: _loading
             ? Center(child: CircularProgressIndicator())
@@ -405,7 +288,6 @@ class _SubscreenState extends State<Subscreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // User is not logged in, show dialog
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -434,7 +316,7 @@ class _SubscreenState extends State<Subscreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context);
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => SignUpScreen()),
@@ -467,13 +349,11 @@ class _SubscreenState extends State<Subscreen> {
       return;
     }
 
-    // Find the product
     final product = _products.firstWhere(
       (p) => p.id == productId,
       orElse: () => throw Exception('Product not found'),
     );
 
-    // Initiate purchase
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
     await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
   }
