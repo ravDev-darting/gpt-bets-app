@@ -448,6 +448,7 @@ class PlanCard extends StatelessWidget {
   }
 }
 
+//gpt code - if u have problems with the code below just uncomment the code above and remove the code below
 class _SubscreenState extends State<Subscreen> {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
