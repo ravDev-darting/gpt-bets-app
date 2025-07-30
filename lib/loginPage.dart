@@ -72,9 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
         'createdAt': FieldValue.serverTimestamp(),
         'subscription': {
           'isActive': false,
-          'plan': 'free',
           'expiryDate': null,
-          'lastUpdated': FieldValue.serverTimestamp(),
         },
         'lastLogin': FieldValue.serverTimestamp(),
       });
@@ -87,9 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!userDoc.data()!.containsKey('subscription')) {
         updateData['subscription'] = {
           'isActive': false,
-          'plan': 'free',
           'expiryDate': null,
-          'lastUpdated': FieldValue.serverTimestamp(),
         };
       }
 
