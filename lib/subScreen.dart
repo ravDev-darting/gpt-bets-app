@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gptbets_sai_app/homeSc.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:gptbets_sai_app/signUpPage.dart';
+import 'dart:async';
 
 class Subscreen extends StatefulWidget {
   const Subscreen({super.key});
@@ -17,6 +16,7 @@ class Subscreen extends StatefulWidget {
 
 class _SubscreenState extends State<Subscreen> {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
+  StreamSubscription<List<PurchaseDetails>>? _subscription;
   List<ProductDetails> _products = [];
   bool _isAvailable = false;
   bool _loading = true;
@@ -28,6 +28,7 @@ class _SubscreenState extends State<Subscreen> {
   }
 
   Future<void> _initializeInAppPurchase() async {
+    // Check if in-app purchase is available
     final bool isAvailable = await _inAppPurchase.isAvailable();
     if (!isAvailable) {
       setState(() {
@@ -37,17 +38,24 @@ class _SubscreenState extends State<Subscreen> {
       return;
     }
 
+    // Set up purchase stream listener
+    _subscription = _inAppPurchase.purchaseStream.listen(
+      _listenToPurchaseUpdated,
+      onDone: () => _subscription?.cancel(),
+      onError: (error) => print('Purchase stream error: $error'),
+    );
+
+    // Fetch product details
     const Set<String> productIds = {
       'weekly_plan',
       'monthly_plan',
       'yearly_plan',
     };
-
     final ProductDetailsResponse response =
         await _inAppPurchase.queryProductDetails(productIds);
-
-    print("Product details: ${response.productDetails.map((e) => e.id)}");
-    print("Not found IDs: ${response.notFoundIDs}");
+    if (response.notFoundIDs.isNotEmpty) {
+      print('Products not found: ${response.notFoundIDs}');
+    }
 
     setState(() {
       _isAvailable = isAvailable;
@@ -56,38 +64,24 @@ class _SubscreenState extends State<Subscreen> {
     });
   }
 
-  Future<void> _handleBuyNow(BuildContext context, String productId) async {
+//save the purchase details
+
+  void _listenToPurchaseUpdated(
+      List<PurchaseDetails> purchaseDetailsList) async {
     final user = FirebaseAuth.instance.currentUser;
 
-    if (user == null) {
-      _promptLogin(context);
-      return;
-    }
+    for (var purchaseDetails in purchaseDetailsList) {
+      if (purchaseDetails.status == PurchaseStatus.pending) {
+        _showSnackBar('Purchase is pending...');
+      } else if (purchaseDetails.status == PurchaseStatus.error) {
+        _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
+      } else if (purchaseDetails.status == PurchaseStatus.purchased ||
+          purchaseDetails.status == PurchaseStatus.restored) {
+        if (purchaseDetails.pendingCompletePurchase) {
+          await _inAppPurchase.completePurchase(purchaseDetails);
+        }
 
-    final product = _products.firstWhere(
-      (p) => p.id == productId,
-      orElse: () {
-        _showSnackBar('Product not found: $productId');
-        throw Exception('Product not found: $productId');
-      },
-    );
-
-    final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
-
-    // Temporarily listen only for this specific purchase
-    late final StreamSubscription<List<PurchaseDetails>> subscription;
-
-    subscription =
-        _inAppPurchase.purchaseStream.listen((purchaseDetailsList) async {
-      for (var purchaseDetails in purchaseDetailsList) {
-        if (purchaseDetails.productID != productId) continue;
-
-        if (purchaseDetails.status == PurchaseStatus.purchased ||
-            purchaseDetails.status == PurchaseStatus.restored) {
-          if (purchaseDetails.pendingCompletePurchase) {
-            await _inAppPurchase.completePurchase(purchaseDetails);
-          }
-
+        if (user != null) {
           DateTime purchaseDate = DateTime.now();
           DateTime expiryDate;
 
@@ -120,8 +114,7 @@ class _SubscreenState extends State<Subscreen> {
             },
           }, SetOptions(merge: true));
 
-          _showSnackBar('Purchase successful: ${purchaseDetails.productID}');
-          // await subscription.cancel();
+          _showSnackBar('Purchase successful!');
 
           Navigator.pushAndRemoveUntil(
             context,
@@ -136,83 +129,11 @@ class _SubscreenState extends State<Subscreen> {
             ),
             (route) => false,
           );
-        } else if (purchaseDetails.status == PurchaseStatus.error) {
-          _showSnackBar('Error: ${purchaseDetails.error?.message}');
-          await subscription.cancel();
-        } else if (purchaseDetails.status == PurchaseStatus.canceled) {
-          _showSnackBar('Purchase canceled');
-          await subscription.cancel();
         }
+      } else if (purchaseDetails.status == PurchaseStatus.canceled) {
+        _showSnackBar('Purchase canceled');
       }
-    });
-
-    try {
-      await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-    } catch (e) {
-      _showSnackBar("Purchase failed: $e");
-      await subscription.cancel();
     }
-  }
-
-  void _promptLogin(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            'Authentication Required',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF9CFF33),
-            ),
-          ),
-          content: Text(
-            'Please register or log in to purchase a subscription.',
-            style: GoogleFonts.poppins(fontSize: 16),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.poppins(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => SignUpScreen()),
-                  (route) => false,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF9CFF33),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Register Yourself',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          backgroundColor: Colors.white,
-          elevation: 8,
-        );
-      },
-    );
   }
 
   void _showSnackBar(String message) {
@@ -222,22 +143,26 @@ class _SubscreenState extends State<Subscreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final features = [
-      'GPTBETS Assistant Model.',
-      'GPTBETS Prediction Model.',
-      'Live Odds and insights across all Bookmakers.',
-      'Automatic Feature Updates when new versions become available.',
-    ];
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(
           leading: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white)),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              icon: Icon(
+                Icons.arrow_back_ios,
+                color: Colors.white,
+              )),
           title: Text('Subscription Plans',
               style: GoogleFonts.poppins(
                   fontSize: 20,
@@ -246,6 +171,7 @@ class _SubscreenState extends State<Subscreen> {
           backgroundColor: Color(0xFF9CFF33),
           centerTitle: true,
           elevation: 5,
+          shadowColor: Colors.black54,
         ),
         body: _loading
             ? Center(child: CircularProgressIndicator())
@@ -256,44 +182,141 @@ class _SubscreenState extends State<Subscreen> {
                       style: GoogleFonts.poppins(color: Colors.white),
                     ),
                   )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        PlanCard(
-                          title: 'Weekly Plan',
-                          price: '\$9.00',
-                          productId: 'weekly_plan',
-                          features: features,
-                          buttonText: 'BUY NOW',
-                          products: _products,
-                          onBuy: _handleBuyNow,
+                : Container(
+                    decoration: BoxDecoration(color: Colors.black),
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            PlanCard(
+                              title: 'Weekly Plan',
+                              price: '\$9.00',
+                              productId: 'weekly_plan',
+                              features: [
+                                'GPTBETS Assistant Model.',
+                                'GPTBETS Prediction Model.',
+                                'Live Odds and insights across all Bookmakers.',
+                                'Automatic Feature Updates when new versions become available.',
+                              ],
+                              buttonText: 'BUY NOW',
+                              products: _products,
+                              onBuy: _handleBuyNow,
+                            ),
+                            SizedBox(height: 16),
+                            PlanCard(
+                              title: 'Monthly Plan',
+                              price: '\$30.00',
+                              productId: 'monthly_plan',
+                              features: [
+                                'GPTBETS Assistant Model.',
+                                'GPTBETS Prediction Model.',
+                                'Live Odds and insights across all Bookmakers.',
+                                'Automatic Feature Updates when new versions become available.',
+                              ],
+                              buttonText: 'BUY NOW',
+                              products: _products,
+                              onBuy: _handleBuyNow,
+                            ),
+                            SizedBox(height: 16),
+                            PlanCard(
+                              title: 'Yearly Plan',
+                              price: '\$250.00 Per Year',
+                              productId: 'yearly_plan',
+                              features: [
+                                'GPTBETS Assistant Model.',
+                                'GPTBETS Prediction Model.',
+                                'Live Odds and insights across all Bookmakers.',
+                                'Automatic Feature Updates when new versions become available.',
+                              ],
+                              buttonText: 'BUY NOW',
+                              products: _products,
+                              onBuy: _handleBuyNow,
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 16),
-                        PlanCard(
-                          title: 'Monthly Plan',
-                          price: '\$30.00',
-                          productId: 'monthly_plan',
-                          features: features,
-                          buttonText: 'BUY NOW',
-                          products: _products,
-                          onBuy: _handleBuyNow,
-                        ),
-                        SizedBox(height: 16),
-                        PlanCard(
-                          title: 'Yearly Plan',
-                          price: '\$250.00',
-                          productId: 'yearly_plan',
-                          features: features,
-                          buttonText: 'BUY NOW',
-                          products: _products,
-                          onBuy: _handleBuyNow,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
       ),
     );
+  }
+
+  void _handleBuyNow(BuildContext context, String productId) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      // User is not logged in, show dialog
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              'Authentication Required',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF9CFF33),
+              ),
+            ),
+            content: Text(
+              'Please register or log in to purchase a subscription.',
+              style: GoogleFonts.poppins(fontSize: 16),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.poppins(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => SignUpScreen()),
+                    (route) => false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF9CFF33),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Register Yourself',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            backgroundColor: Colors.white,
+            elevation: 8,
+          );
+        },
+      );
+      return;
+    }
+
+    // Find the product
+    final product = _products.firstWhere(
+      (p) => p.id == productId,
+      orElse: () => throw Exception('Product not found'),
+    );
+
+    // Initiate purchase
+    final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
+    await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
   }
 }
 
@@ -324,6 +347,7 @@ class PlanCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
+      shadowColor: Colors.black45,
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -338,29 +362,38 @@ class PlanCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF9CFF33))),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF9CFF33),
+                ),
+              ),
               SizedBox(height: 8),
-              Text(price,
-                  style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      color: Color(0xFF388E3C),
-                      fontWeight: FontWeight.bold)),
+              Text(
+                price,
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  color: Color(0xFF388E3C),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               SizedBox(height: 16),
               ...features.map((feature) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(Icons.check_circle,
                             color: Color(0xFF9CFF33), size: 18),
                         SizedBox(width: 10),
                         Expanded(
-                          child: Text(feature,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 16, color: Colors.black87)),
+                          child: Text(
+                            feature,
+                            style: GoogleFonts.poppins(
+                                fontSize: 16, color: Colors.black87),
+                          ),
                         ),
                       ],
                     ),
@@ -376,12 +409,15 @@ class PlanCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 6,
+                    shadowColor: Colors.black45,
                   ),
-                  child: Text(buttonText,
-                      style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold)),
+                  child: Text(
+                    buttonText,
+                    style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],
