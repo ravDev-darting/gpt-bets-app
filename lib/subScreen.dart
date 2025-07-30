@@ -121,7 +121,7 @@ class _SubscreenState extends State<Subscreen> {
           }, SetOptions(merge: true));
 
           _showSnackBar('Purchase successful: ${purchaseDetails.productID}');
-          await subscription.cancel();
+          // await subscription.cancel();
 
           Navigator.pushAndRemoveUntil(
             context,
