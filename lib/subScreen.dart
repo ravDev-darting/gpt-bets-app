@@ -77,9 +77,9 @@ class _SubscreenState extends State<Subscreen> {
         _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
-        if (purchaseDetails.pendingCompletePurchase) {
-          await _inAppPurchase.completePurchase(purchaseDetails);
-        }
+        // if (purchaseDetails.pendingCompletePurchase) {
+        await _inAppPurchase.completePurchase(purchaseDetails);
+        // }
 
         if (user != null) {
           DateTime purchaseDate = DateTime.now();
