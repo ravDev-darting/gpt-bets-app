@@ -47,7 +47,7 @@ class _SubscreenState extends State<Subscreen> {
 
     // Fetch product details
     const Set<String> productIds = {
-      'weekly_plan_v3',
+      'weekly_plan_v4',
       'monthly_plan',
       'yearly_plan',
     };
@@ -86,7 +86,7 @@ class _SubscreenState extends State<Subscreen> {
           DateTime expiryDate;
 
           switch (purchaseDetails.productID) {
-            case 'weekly_plan_v3':
+            case 'weekly_plan_v4':
               expiryDate = purchaseDate.add(Duration(days: 7));
               break;
             case 'monthly_plan':
@@ -192,7 +192,7 @@ class _SubscreenState extends State<Subscreen> {
                             PlanCard(
                               title: 'Weekly Plan',
                               price: '\$9.00',
-                              productId: 'weekly_plan_v3',
+                              productId: 'weekly_plan_v4',
                               features: [
                                 'GPTBETS Assistant Model.',
                                 'GPTBETS Prediction Model.',
