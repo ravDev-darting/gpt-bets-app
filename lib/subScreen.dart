@@ -47,9 +47,9 @@ class _SubscreenState extends State<Subscreen> {
 
     // Fetch product details
     const Set<String> productIds = {
-      'weekly_plan_v4',
-      'monthly_plan',
-      'yearly_plan',
+      'weekly_plan_v5',
+      'monthly_plan_v5',
+      'yearly_plan_v5',
     };
     final ProductDetailsResponse response =
         await _inAppPurchase.queryProductDetails(productIds);
@@ -86,14 +86,14 @@ class _SubscreenState extends State<Subscreen> {
           DateTime expiryDate;
 
           switch (purchaseDetails.productID) {
-            case 'weekly_plan_v4':
+            case 'weekly_plan_v5':
               expiryDate = purchaseDate.add(Duration(days: 7));
               break;
-            case 'monthly_plan':
+            case 'monthly_plan_v5':
               expiryDate = DateTime(
                   purchaseDate.year, purchaseDate.month + 1, purchaseDate.day);
               break;
-            case 'yearly_plan':
+            case 'yearly_plan_v5':
               expiryDate = DateTime(
                   purchaseDate.year + 1, purchaseDate.month, purchaseDate.day);
               break;
@@ -192,7 +192,7 @@ class _SubscreenState extends State<Subscreen> {
                             PlanCard(
                               title: 'Weekly Plan',
                               price: '\$9.00',
-                              productId: 'weekly_plan_v4',
+                              productId: 'weekly_plan_v5',
                               features: [
                                 'GPTBETS Assistant Model.',
                                 'GPTBETS Prediction Model.',
@@ -207,7 +207,7 @@ class _SubscreenState extends State<Subscreen> {
                             PlanCard(
                               title: 'Monthly Plan',
                               price: '\$30.00',
-                              productId: 'monthly_plan',
+                              productId: 'monthly_plan_v5',
                               features: [
                                 'GPTBETS Assistant Model.',
                                 'GPTBETS Prediction Model.',
@@ -222,7 +222,7 @@ class _SubscreenState extends State<Subscreen> {
                             PlanCard(
                               title: 'Yearly Plan',
                               price: '\$250.00 Per Year',
-                              productId: 'yearly_plan',
+                              productId: 'yearly_plan_v5',
                               features: [
                                 'GPTBETS Assistant Model.',
                                 'GPTBETS Prediction Model.',
