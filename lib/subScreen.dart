@@ -6,6 +6,7 @@ import 'package:gptbets_sai_app/homeSc.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:gptbets_sai_app/signUpPage.dart';
 import 'dart:async';
+import 'dart:io';
 
 class Subscreen extends StatefulWidget {
   const Subscreen({super.key});
@@ -77,6 +78,11 @@ class _SubscreenState extends State<Subscreen> {
         _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
+        if (Platform.isIOS &&
+            purchaseDetails.status == PurchaseStatus.restored) {
+          continue;
+        }
+
         if (purchaseDetails.pendingCompletePurchase) {
           await _inAppPurchase.completePurchase(purchaseDetails);
         }
