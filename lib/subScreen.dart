@@ -322,10 +322,16 @@ class _SubscreenState extends State<Subscreen> {
 
     // Initiate purchase
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
-    await _inAppPurchase.buyConsumable(
-      purchaseParam: purchaseParam,
-      autoConsume: true,
-    );
+    if (Platform.isIOS) {
+      await _inAppPurchase.buyNonConsumable(
+        purchaseParam: purchaseParam,
+      );
+    } else {
+      await _inAppPurchase.buyConsumable(
+        purchaseParam: purchaseParam,
+        autoConsume: true,
+      );
+    }
   }
 }
 
