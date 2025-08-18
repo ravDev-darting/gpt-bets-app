@@ -26,10 +26,20 @@ class _SubscreenState extends State<Subscreen> {
   bool _isAvailable = false;
   bool _loading = true;
 
+  // New fields
+  bool _initializingPastPurchases = true;
+  String? _pendingUserPurchaseId;
+
   @override
   void initState() {
     super.initState();
     _initializeInAppPurchase();
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _initializeInAppPurchase() async {
@@ -44,13 +54,52 @@ class _SubscreenState extends State<Subscreen> {
       return;
     }
 
-    // Important: keep the listener active while the app runs.
+    // Start listening to purchase updates
     _subscription = _inAppPurchase.purchaseStream.listen(
       _handlePurchaseUpdates,
       onDone: () => _subscription?.cancel(),
       onError: (error) => debugPrint('[IAP] purchase stream error: $error'),
     );
 
+    // FIRST: query past purchases and persist them quietly (no UI navigation)
+    try {
+      final past = await _inAppPurchase.queryPastPurchases();
+      debugPrint('[IAP] past purchases count=${past.pastPurchases.length}');
+      for (final pastPurchase in past.pastPurchases) {
+        try {
+          // Persist using productID + transaction info
+          await _persistSubscriptionFromPastPurchase(pastPurchase);
+          debugPrint('[IAP] persisted past purchase ${pastPurchase.productID}');
+        } catch (e) {
+          debugPrint('[IAP] error persisting past purchase ${pastPurchase.productID}: $e');
+        }
+
+        // Attempt to finish if needed. Some plugin versions accept PastPurchaseDetails here.
+        try {
+          if (pastPurchase.pendingCompletePurchase ?? false) {
+            // convert to PurchaseDetails if needed (some plugin versions allow passing PastPurchaseDetails)
+            final pd = PurchaseDetails(
+              purchaseID: pastPurchase.purchaseID,
+              productID: pastPurchase.productID,
+              status: pastPurchase.status,
+              transactionDate: pastPurchase.transactionDate,
+              verificationData: pastPurchase.verificationData,
+            );
+            await _inAppPurchase.completePurchase(pd);
+            debugPrint('[IAP] completed pending past purchase ${pastPurchase.productID}');
+          }
+        } catch (e) {
+          debugPrint('[IAP] could not complete past purchase: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('[IAP] queryPastPurchases failed: $e');
+    } finally {
+      // mark that initial past purchases processing is complete
+      _initializingPastPurchases = false;
+    }
+
+    // THEN: fetch product details for UI
     const productIds = {
       'weekly_plan_v6',
       'monthly_plan_v6',
@@ -70,19 +119,13 @@ class _SubscreenState extends State<Subscreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
-  }
-
-  /// Purchase stream handler
+  /// Handles incoming purchase updates
   void _handlePurchaseUpdates(List<PurchaseDetails> purchaseDetailsList) async {
-    debugPrint('[IAP] purchase update: ${purchaseDetailsList.length} items');
+    debugPrint('[IAP] purchase update: ${purchaseDetailsList.length} item(s)');
     final user = FirebaseAuth.instance.currentUser;
 
     for (final purchaseDetails in purchaseDetailsList) {
-      debugPrint('[IAP] status=${purchaseDetails.status} id=${purchaseDetails.productID}');
+      debugPrint('[IAP] update: id=${purchaseDetails.productID} status=${purchaseDetails.status}');
       switch (purchaseDetails.status) {
         case PurchaseStatus.pending:
           _showSnackBar('Purchase is pending...');
@@ -94,24 +137,31 @@ class _SubscreenState extends State<Subscreen> {
 
         case PurchaseStatus.purchased:
         case PurchaseStatus.restored:
-          // handle both purchased and restored
           try {
-            // Basic verification placeholder (recommended: server-side validation)
             final verified = await _verifyPurchase(purchaseDetails);
             if (!verified) {
               _showSnackBar('Purchase verification failed');
             } else {
-              // persist subscription
+              // persist subscription always (to handle restores & past purchases)
               await _persistSubscriptionToFirestore(purchaseDetails, user);
 
-              // complete the transaction so the store doesn't deliver it again
+              // finish transaction so store doesn't re-deliver
               if (purchaseDetails.pendingCompletePurchase) {
-                debugPrint('[IAP] completing purchase for ${purchaseDetails.productID}');
-                await _inAppPurchase.completePurchase(purchaseDetails);
+                try {
+                  await _inAppPurchase.completePurchase(purchaseDetails);
+                  debugPrint('[IAP] completePurchase called for ${purchaseDetails.productID}');
+                } catch (e) {
+                  debugPrint('[IAP] completePurchase failed: $e');
+                }
               }
 
-              // navigate after persistence & completion
-              if (mounted) {
+              // Navigate only when this was a user-initiated purchase (pending id matches)
+              final isUserInitiated = !_initializingPastPurchases &&
+                  _pendingUserPurchaseId != null &&
+                  _pendingUserPurchaseId == purchaseDetails.productID;
+
+              if (isUserInitiated && mounted) {
+                _pendingUserPurchaseId = null;
                 _showSnackBar('Purchase successful!');
                 Navigator.pushAndRemoveUntil(
                   context,
@@ -124,14 +174,19 @@ class _SubscreenState extends State<Subscreen> {
                   ),
                   (route) => false,
                 );
+              } else {
+                debugPrint('[IAP] purchase persisted but no navigation (initializingPast=$_initializingPastPurchases, pendingId=$_pendingUserPurchaseId)');
               }
             }
           } catch (e) {
             debugPrint('[IAP] error handling purchased/restored: $e');
             _showSnackBar('Error delivering purchase: $e');
-            // still attempt to complete to avoid duplicate
             if (purchaseDetails.pendingCompletePurchase) {
-              await _inAppPurchase.completePurchase(purchaseDetails);
+              try {
+                await _inAppPurchase.completePurchase(purchaseDetails);
+              } catch (e2) {
+                debugPrint('[IAP] completePurchase fallback failed: $e2');
+              }
             }
           }
           break;
@@ -146,16 +201,17 @@ class _SubscreenState extends State<Subscreen> {
     }
   }
 
+  /// Local (basic) verification placeholder. Replace with server-side validation for production.
   Future<bool> _verifyPurchase(PurchaseDetails p) async {
-    // IMPORTANT: This is a placeholder. Implement server-side receipt validation for production.
-    // For sandbox/TestFlight testing, we just check that status == purchased.
-    debugPrint('[IAP] verifying ${p.productID} (local check)');
+    debugPrint('[IAP] verifying ${p.productID} locally');
+    // For TestFlight / sandbox we accept purchased/restored as valid.
     return p.status == PurchaseStatus.purchased || p.status == PurchaseStatus.restored;
   }
 
+  /// Persist subscription info for a PurchaseDetails object
   Future<void> _persistSubscriptionToFirestore(PurchaseDetails purchaseDetails, User? user) async {
     if (user == null) {
-      debugPrint('[IAP] No user - cannot persist subscription');
+      debugPrint('[IAP] persist skipped: no authenticated user');
       return;
     }
 
@@ -186,10 +242,48 @@ class _SubscreenState extends State<Subscreen> {
       },
     }, SetOptions(merge: true));
 
-    debugPrint('[IAP] persisted subscription for ${user.uid}: ${purchaseDetails.productID} -> $expiryDate');
+    debugPrint('[IAP] subscription written for ${user.uid}: ${purchaseDetails.productID} -> $expiryDate');
   }
 
-  /// safe product lookup
+  /// Persist subscription from PastPurchaseDetails (returned by queryPastPurchases)
+  Future<void> _persistSubscriptionFromPastPurchase(PastPurchaseDetails past, [User? user]) async {
+    user ??= FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      debugPrint('[IAP] persistPast skipped: no authenticated user');
+      return;
+    }
+
+    final DateTime purchaseDate = DateTime.now();
+    late final DateTime expiryDate;
+
+    final pid = past.productID ?? '';
+
+    switch (pid) {
+      case 'weekly_plan_v6':
+        expiryDate = purchaseDate.add(const Duration(days: 7));
+        break;
+      case 'monthly_plan_v6':
+        expiryDate = DateTime(purchaseDate.year, purchaseDate.month + 1, purchaseDate.day);
+        break;
+      case 'yearly_plan_v6':
+        expiryDate = DateTime(purchaseDate.year + 1, purchaseDate.month, purchaseDate.day);
+        break;
+      default:
+        expiryDate = purchaseDate;
+    }
+
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+      'subscription': {
+        'productId': pid,
+        'status': 'active',
+        'purchaseDate': purchaseDate,
+        'expiryDate': expiryDate,
+        'isActive': true,
+      },
+    }, SetOptions(merge: true));
+  }
+
+  /// Safe product lookup
   ProductDetails? _findProduct(String id) {
     try {
       return _products.firstWhere((p) => p.id == id);
@@ -200,12 +294,10 @@ class _SubscreenState extends State<Subscreen> {
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Initiates purchase flow (safe)
+  /// Initiate purchase and mark as user-initiated
   void _handleBuyNow(BuildContext context, String productId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -221,14 +313,24 @@ class _SubscreenState extends State<Subscreen> {
 
     final purchaseParam = PurchaseParam(productDetails: product);
 
-    // For subscriptions use buyNonConsumable on both platforms.
-    // buyConsumable is intended for single-use consumables.
+    // mark this as user-initiated so listener can navigate after success
+    _pendingUserPurchaseId = productId;
+
+    // safety: clear pending flag after 60s in case store doesn't respond
+    Future.delayed(const Duration(seconds: 60), () {
+      if (_pendingUserPurchaseId == productId) {
+        _pendingUserPurchaseId = null;
+      }
+    });
+
     try {
+      // For subscriptions we call buyNonConsumable on both platforms
       await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
       debugPrint('[IAP] buyNonConsumable invoked for $productId');
     } catch (e) {
       debugPrint('[IAP] purchase invocation error: $e');
       _showSnackBar('Failed to start purchase: $e');
+      _pendingUserPurchaseId = null;
     }
   }
 
@@ -236,17 +338,8 @@ class _SubscreenState extends State<Subscreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'Authentication Required',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF9CFF33),
-          ),
-        ),
-        content: Text(
-          'Please register or log in to purchase a subscription.',
-          style: GoogleFonts.poppins(fontSize: 16),
-        ),
+        title: Text('Authentication Required', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF9CFF33))),
+        content: Text('Please register or log in to purchase a subscription.', style: GoogleFonts.poppins(fontSize: 16)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey))),
           ElevatedButton(
