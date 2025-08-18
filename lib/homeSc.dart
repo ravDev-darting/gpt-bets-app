@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -407,7 +408,11 @@ class _HomeScreenState extends State<HomeScreen>
                             scale: _fadeAnimation,
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                Get.toNamed('/sub');
+                                if (Platform.isIOS) {
+                                  Get.toNamed('/sub2');
+                                } else {
+                                  Get.toNamed('/sub');
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
