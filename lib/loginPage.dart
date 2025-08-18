@@ -1,3 +1,4 @@
+import 'package:email_validator/email_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final String email = _emailController.text.trim();
     final String password = _passwordController.text;
 
-    if (!_isEmailValid(email)) {
+    if (!EmailValidator.validate(email)) {
       _showErrorDialog(
           "Please enter a valid email address.\n\nExample: name@domain.com");
       return;
@@ -95,11 +96,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  bool _isEmailValid(String email) {
-    return RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    ).hasMatch(email);
-  }
+  // bool _isEmailValid(String email) {
+  //   return RegExp(
+  //     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+  //   ).hasMatch(email);
+  // }
 
   bool _isPasswordValid(String password) {
     return RegExp(
@@ -174,6 +175,125 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _showForgotPasswordDialog() {
+    final TextEditingController emailController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFF9CFF33), width: 1),
+          ),
+          title: Row(
+            children: [
+              const Icon(
+                Icons.lock_reset,
+                color: Color(0xFF9CFF33),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Reset Password',
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF9CFF33),
+                ),
+              ),
+            ],
+          ),
+          content: TextField(
+            controller: emailController,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'Enter your email',
+              hintStyle: TextStyle(color: Colors.grey),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                final email = emailController.text.trim();
+                if (!EmailValidator.validate(email)) {
+                  _showErrorDialog("Please enter a valid email.");
+                  return;
+                }
+
+                try {
+                  await _auth.sendPasswordResetEmail(email: email);
+                  Navigator.of(context).pop();
+                  _showSuccessDialog(
+                      "Password reset email sent. Check your inbox!");
+                } on FirebaseAuthException catch (e) {
+                  _showErrorDialog(e.message ?? "Failed to send reset email");
+                }
+              },
+              child: Text(
+                'Send',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFF9CFF33),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSuccessDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF9CFF33), width: 1),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Color(0xFF9CFF33)),
+            const SizedBox(width: 10),
+            Text(
+              'Success',
+              style: GoogleFonts.poppins(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF9CFF33),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: GoogleFonts.poppins(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF9CFF33),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -208,6 +328,17 @@ class _LoginScreenState extends State<LoginScreen> {
               _buildPasswordTextField(),
               const SizedBox(height: 30),
               _buildLoginButton(),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: _showForgotPasswordDialog,
+                child: const Text(
+                  'Forgot Password?',
+                  style: TextStyle(
+                    color: Color(0xFF9CFF33),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
               TextButton(
                 onPressed: () => Get.toNamed('/signup'),

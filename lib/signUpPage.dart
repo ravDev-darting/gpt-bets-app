@@ -80,23 +80,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  bool _isEmailValid(String email) {
-    final RegExp emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
+  // bool _isEmailValid(String email) {
+  //   final RegExp emailRegex = RegExp(
+  //     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+  //   );
 
-    if (email.isEmpty) return false;
-    if (!emailRegex.hasMatch(email)) return false;
-    if (email.length > 254) return false;
-    if (email.startsWith('.') || email.endsWith('.')) return false;
-    if (email.contains('..')) return false;
+  //   if (email.isEmpty) return false;
+  //   if (!emailRegex.hasMatch(email)) return false;
+  //   if (email.length > 254) return false;
+  //   if (email.startsWith('.') || email.endsWith('.')) return false;
+  //   if (email.contains('..')) return false;
 
-    final domain = email.split('@')[1];
-    if (!domain.contains('.')) return false;
-    if (domain.startsWith('-') || domain.endsWith('-')) return false;
+  //   final domain = email.split('@')[1];
+  //   if (!domain.contains('.')) return false;
+  //   if (domain.startsWith('-') || domain.endsWith('-')) return false;
 
-    return true;
-  }
+  //   return true;
+  // }
 
   bool _isPasswordValid(String password) {
     final RegExp passwordRegex =

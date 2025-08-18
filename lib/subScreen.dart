@@ -116,8 +116,8 @@ class _SubscreenState extends State<Subscreen> {
           _showSnackBar('Purchase canceled');
           break;
 
-        default:
-          break;
+        // default:
+        // break;
       }
     }
   }
