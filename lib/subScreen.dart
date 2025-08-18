@@ -68,44 +68,59 @@ class _SubscreenState extends State<Subscreen> {
   }
 
   /// Handle incoming purchase updates
-void _handlePurchaseUpdates(List<PurchaseDetails> purchaseDetailsList) async {
-  final user = FirebaseAuth.instance.currentUser;
+  void _handlePurchaseUpdates(List<PurchaseDetails> purchaseDetailsList) async {
+    final user = FirebaseAuth.instance.currentUser;
 
-  for (final purchaseDetails in purchaseDetailsList) {
-    switch (purchaseDetails.status) {
-      case PurchaseStatus.pending:
-        _showSnackBar('Purchase is pending...');
-        break;
+    for (final purchaseDetails in purchaseDetailsList) {
+      switch (purchaseDetails.status) {
+        case PurchaseStatus.pending:
+          _showSnackBar('Purchase is pending...');
+          break;
 
-      case PurchaseStatus.error:
-        _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
-        break;
+        case PurchaseStatus.error:
+          _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
+          break;
 
-      case PurchaseStatus.purchased:
-        await _deliverProduct(purchaseDetails, user);
-        if (purchaseDetails.pendingCompletePurchase) {
-          await _inAppPurchase.completePurchase(purchaseDetails);
-        }
-        break;
+        case PurchaseStatus.purchased:
+          await _deliverProduct(purchaseDetails, user);
+          if (purchaseDetails.pendingCompletePurchase) {
+            await _inAppPurchase.completePurchase(purchaseDetails);
+          }
+          break;
 
-      case PurchaseStatus.restored:
-        // ✅ On iOS, restored purchases should also unlock the subscription
-        await _deliverProduct(purchaseDetails, user);
-        if (purchaseDetails.pendingCompletePurchase) {
-          await _inAppPurchase.completePurchase(purchaseDetails);
-        }
-        break;
+        case PurchaseStatus.restored:
+          // Only restore old subscriptions, do not skip new auto-renewable subscriptions
+          if (Platform.isIOS) {
+            // Check if subscription is already active in Firestore
+            final doc = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user?.uid)
+                .get();
+            final existingProductId = doc.data()?['subscription']?['productId'];
 
-      case PurchaseStatus.canceled:
-        _showSnackBar('Purchase canceled');
-        break;
+            if (existingProductId == purchaseDetails.productID) {
+              // Already active, no need to deliver again
+              if (purchaseDetails.pendingCompletePurchase) {
+                await _inAppPurchase.completePurchase(purchaseDetails);
+              }
+              break;
+            }
+          }
+          await _deliverProduct(purchaseDetails, user);
+          if (purchaseDetails.pendingCompletePurchase) {
+            await _inAppPurchase.completePurchase(purchaseDetails);
+          }
+          break;
 
-      default:
-        break;
+        case PurchaseStatus.canceled:
+          _showSnackBar('Purchase canceled');
+          break;
+
+        default:
+          break;
+      }
     }
   }
-}
-
 
   /// Deliver purchased product to Firestore and update membership
   Future<void> _deliverProduct(
@@ -446,8 +461,8 @@ class PlanCard extends StatelessWidget {
                   onPressed: () => onBuy(context, productId),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF9CFF33),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -471,4 +486,3 @@ class PlanCard extends StatelessWidget {
     );
   }
 }
-
