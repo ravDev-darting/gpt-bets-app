@@ -44,6 +44,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       setState(() {
         _isLoading = false;
       });
+      _showDialog('Error', 'In-App Purchases not available on this device.');
     }
 
     _inAppPurchase.purchaseStream.listen(_listenToPurchaseUpdated);
@@ -52,30 +53,40 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   void _listenToPurchaseUpdated(
       List<PurchaseDetails> purchaseDetailsList) async {
     for (var purchaseDetails in purchaseDetailsList) {
-      if (purchaseDetails.status == PurchaseStatus.purchased ||
-          purchaseDetails.status == PurchaseStatus.restored) {
-        await _verifyAndSavePurchase(purchaseDetails);
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => HomeScreen()),
-          );
+      if (purchaseDetails.status == PurchaseStatus.pending) {
+        _showDialog('Pending', 'Your purchase is pending. Please wait...');
+      } else if (purchaseDetails.status == PurchaseStatus.purchased) {
+        try {
+          await _verifyAndSavePurchase(purchaseDetails);
+
+          if (Platform.isAndroid) {
+            await _inAppPurchase.completePurchase(purchaseDetails);
+          }
+
+          _showDialog('Success', 'Purchase successful! Navigating to Home...',
+              onClose: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => HomeScreen()),
+            );
+          });
+        } catch (e) {
+          _showDialog('Error', 'Purchase verification failed: $e');
         }
       } else if (purchaseDetails.status == PurchaseStatus.error) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('Purchase Error: ${purchaseDetails.error?.message}')),
-        );
+        _showDialog(
+            'Error', 'Purchase failed: ${purchaseDetails.error?.message}');
+      } else if (purchaseDetails.status == PurchaseStatus.restored) {
+        // Optionally handle restored subscriptions
+        _showDialog('Restored', 'Previous purchase restored.');
       }
     }
   }
 
   Future<void> _verifyAndSavePurchase(PurchaseDetails purchaseDetails) async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) throw Exception('User not logged in');
 
-    // Example: setting expiry dates based on plan
     DateTime purchaseDate = DateTime.now();
     DateTime expiryDate;
 
@@ -115,17 +126,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
+  void _showDialog(String title, String message, {VoidCallback? onClose}) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (onClose != null) onClose();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (!_available) {
-      return const Scaffold(
-        body: Center(child: Text('In-App Purchases not available')),
       );
     }
 
