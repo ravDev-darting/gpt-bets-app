@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart'; // Add this for Firestore
+import 'package:email_validator/email_validator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -33,7 +34,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    if (!_isEmailValid(email)) {
+    if (!EmailValidator.validate(email)) {
       _showErrorDialog(
           "Please enter a valid email address.\n\nExample: name@domain.com");
       return;
