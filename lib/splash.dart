@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gptbets_sai_app/homeSc.dart';
@@ -102,44 +103,104 @@ class _SplashScreenMainState extends State<SplashScreenMain>
     );
   }
 
-  void _checkLoginStatus() {
+  void _checkLoginStatus() async {
     User? user = _auth.currentUser;
 
     if (user != null) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const HomeScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
-        (route) => false,
-      );
+      // Get user doc from Firestore
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final data = userDoc.data();
+      final hasLoggedInBefore = data != null && data['lastLogin'] != null;
+
+      if (hasLoggedInBefore) {
+        // Navigate to Home
+        Navigator.pushAndRemoveUntil(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const HomeScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 800),
+          ),
+          (route) => false,
+        );
+      } else {
+        // Navigate to LoginScreen
+        Navigator.pushAndRemoveUntil(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const LoginScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 800),
+          ),
+          (route) => false,
+        );
+      }
     } else {
+      // No user signed in
       Navigator.pushAndRemoveUntil(
         context,
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const LoginScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            );
-          },
-          transitionDuration: const Duration(milliseconds: 800),
-        ),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
         (route) => false,
       );
     }
   }
+
+  // void _checkLoginStatus() {
+  //   User? user = _auth.currentUser;
+
+  //   if (user != null) {
+  //     Navigator.pushAndRemoveUntil(
+  //       context,
+  //       PageRouteBuilder(
+  //         pageBuilder: (context, animation, secondaryAnimation) =>
+  //             const HomeScreen(),
+  //         transitionsBuilder: (context, animation, secondaryAnimation, child) {
+  //           return FadeTransition(
+  //             opacity: animation,
+  //             child: child,
+  //           );
+  //         },
+  //         transitionDuration: const Duration(milliseconds: 800),
+  //       ),
+  //       (route) => false,
+  //     );
+  //   } else {
+  //     Navigator.pushAndRemoveUntil(
+  //       context,
+  //       PageRouteBuilder(
+  //         pageBuilder: (context, animation, secondaryAnimation) =>
+  //             const LoginScreen(),
+  //         transitionsBuilder: (context, animation, secondaryAnimation, child) {
+  //           return SlideTransition(
+  //             position: Tween<Offset>(
+  //               begin: const Offset(0, 1),
+  //               end: Offset.zero,
+  //             ).animate(animation),
+  //             child: child,
+  //           );
+  //         },
+  //         transitionDuration: const Duration(milliseconds: 800),
+  //       ),
+  //       (route) => false,
+  //     );
+  //   }
+  // }
 }
