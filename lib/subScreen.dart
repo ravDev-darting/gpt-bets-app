@@ -26,7 +26,7 @@ class _SubscreenState extends State<Subscreen> {
   bool _isAvailable = false;
   bool _loading = true;
 
-  // New fields
+  // Track initial restore processing and user-initiated purchase
   bool _initializingPastPurchases = true;
   String? _pendingUserPurchaseId;
 
@@ -61,42 +61,21 @@ class _SubscreenState extends State<Subscreen> {
       onError: (error) => debugPrint('[IAP] purchase stream error: $error'),
     );
 
-    // FIRST: query past purchases and persist them quietly (no UI navigation)
+    // Ask StoreKit / Play to restore previous purchases.
+    // Restored purchases will be delivered via purchaseStream.
     try {
-      final past = await _inAppPurchase.queryPastPurchases();
-      debugPrint('[IAP] past purchases count=${past.pastPurchases.length}');
-      for (final pastPurchase in past.pastPurchases) {
-        try {
-          // Persist using productID + transaction info
-          await _persistSubscriptionFromPastPurchase(pastPurchase);
-          debugPrint('[IAP] persisted past purchase ${pastPurchase.productID}');
-        } catch (e) {
-          debugPrint('[IAP] error persisting past purchase ${pastPurchase.productID}: $e');
-        }
-
-        // Attempt to finish if needed. Some plugin versions accept PastPurchaseDetails here.
-        try {
-          if (pastPurchase.pendingCompletePurchase ?? false) {
-            // convert to PurchaseDetails if needed (some plugin versions allow passing PastPurchaseDetails)
-            final pd = PurchaseDetails(
-              purchaseID: pastPurchase.purchaseID,
-              productID: pastPurchase.productID,
-              status: pastPurchase.status,
-              transactionDate: pastPurchase.transactionDate,
-              verificationData: pastPurchase.verificationData,
-            );
-            await _inAppPurchase.completePurchase(pd);
-            debugPrint('[IAP] completed pending past purchase ${pastPurchase.productID}');
-          }
-        } catch (e) {
-          debugPrint('[IAP] could not complete past purchase: $e');
-        }
-      }
+      debugPrint('[IAP] calling restorePurchases() to fetch past entitlements...');
+      // Mark initialization phase (suppress navigation for restored events)
+      _initializingPastPurchases = true;
+      await _inAppPurchase.restorePurchases();
+      // Wait briefly to allow restored events to arrive via purchaseStream.
+      // (Safety heuristic — plugin versions differ on timing.)
+      await Future.delayed(const Duration(seconds: 5));
     } catch (e) {
-      debugPrint('[IAP] queryPastPurchases failed: $e');
+      debugPrint('[IAP] restorePurchases() error: $e');
     } finally {
-      // mark that initial past purchases processing is complete
       _initializingPastPurchases = false;
+      debugPrint('[IAP] initial restore phase completed');
     }
 
     // THEN: fetch product details for UI
@@ -243,44 +222,6 @@ class _SubscreenState extends State<Subscreen> {
     }, SetOptions(merge: true));
 
     debugPrint('[IAP] subscription written for ${user.uid}: ${purchaseDetails.productID} -> $expiryDate');
-  }
-
-  /// Persist subscription from PastPurchaseDetails (returned by queryPastPurchases)
-  Future<void> _persistSubscriptionFromPastPurchase(PastPurchaseDetails past, [User? user]) async {
-    user ??= FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      debugPrint('[IAP] persistPast skipped: no authenticated user');
-      return;
-    }
-
-    final DateTime purchaseDate = DateTime.now();
-    late final DateTime expiryDate;
-
-    final pid = past.productID ?? '';
-
-    switch (pid) {
-      case 'weekly_plan_v6':
-        expiryDate = purchaseDate.add(const Duration(days: 7));
-        break;
-      case 'monthly_plan_v6':
-        expiryDate = DateTime(purchaseDate.year, purchaseDate.month + 1, purchaseDate.day);
-        break;
-      case 'yearly_plan_v6':
-        expiryDate = DateTime(purchaseDate.year + 1, purchaseDate.month, purchaseDate.day);
-        break;
-      default:
-        expiryDate = purchaseDate;
-    }
-
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-      'subscription': {
-        'productId': pid,
-        'status': 'active',
-        'purchaseDate': purchaseDate,
-        'expiryDate': expiryDate,
-        'isActive': true,
-      },
-    }, SetOptions(merge: true));
   }
 
   /// Safe product lookup
