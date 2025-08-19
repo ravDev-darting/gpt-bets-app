@@ -29,7 +29,6 @@ class _SubscreenState extends State<Subscreen> {
   }
 
   Future<void> _initializeInAppPurchase() async {
-    // Check if in-app purchase is available
     final bool isAvailable = await _inAppPurchase.isAvailable();
     if (!isAvailable) {
       setState(() {
@@ -39,7 +38,7 @@ class _SubscreenState extends State<Subscreen> {
       return;
     }
 
-    // Set up purchase stream listener
+    // Listen globally for purchases
     _subscription = _inAppPurchase.purchaseStream.listen(
       _listenToPurchaseUpdated,
       onDone: () => _subscription?.cancel(),
@@ -65,8 +64,7 @@ class _SubscreenState extends State<Subscreen> {
     });
   }
 
-//save the purchase details
-
+  /// Handle purchase updates
   void _listenToPurchaseUpdated(
       List<PurchaseDetails> purchaseDetailsList) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -78,18 +76,13 @@ class _SubscreenState extends State<Subscreen> {
         _showSnackBar('Purchase error: ${purchaseDetails.error?.message}');
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
-     
-        if (purchaseDetails.pendingCompletePurchase) {
-          await _inAppPurchase.completePurchase(purchaseDetails);
-        }
-
         if (user != null) {
           DateTime purchaseDate = DateTime.now();
           DateTime expiryDate;
 
           switch (purchaseDetails.productID) {
             case 'weekly_plan_v6':
-              expiryDate = purchaseDate.add(Duration(days: 7));
+              expiryDate = purchaseDate.add(const Duration(days: 7));
               break;
             case 'monthly_plan_v6':
               expiryDate = DateTime(
@@ -103,6 +96,7 @@ class _SubscreenState extends State<Subscreen> {
               expiryDate = purchaseDate;
           }
 
+          // Save to Firestore BEFORE consuming
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
@@ -118,6 +112,12 @@ class _SubscreenState extends State<Subscreen> {
 
           _showSnackBar('Purchase successful!');
 
+          // ✅ Complete purchase (consume it if Android consumable)
+          if (purchaseDetails.pendingCompletePurchase) {
+            await _inAppPurchase.completePurchase(purchaseDetails);
+          }
+
+          // Navigate to Home
           Navigator.pushAndRemoveUntil(
             context,
             PageRouteBuilder(
@@ -158,25 +158,20 @@ class _SubscreenState extends State<Subscreen> {
         backgroundColor: Colors.black,
         appBar: AppBar(
           leading: IconButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              icon: Icon(
-                Icons.arrow_back_ios,
-                color: Colors.white,
-              )),
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white)),
           title: Text('Subscription Plans',
               style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                   color: Colors.white)),
-          backgroundColor: Color(0xFF9CFF33),
+          backgroundColor: const Color(0xFF9CFF33),
           centerTitle: true,
           elevation: 5,
           shadowColor: Colors.black54,
         ),
         body: _loading
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : !_isAvailable
                 ? Center(
                     child: Text(
@@ -184,60 +179,40 @@ class _SubscreenState extends State<Subscreen> {
                       style: GoogleFonts.poppins(color: Colors.white),
                     ),
                   )
-                : Container(
-                    decoration: BoxDecoration(color: Colors.black),
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            PlanCard(
-                              title: 'Weekly Plan',
-                              price: '\$9.00',
-                              productId: 'weekly_plan_v6',
-                              features: [
-                                'GPTBETS Assistant Model.',
-                                'GPTBETS Prediction Model.',
-                                'Live Odds and insights across all Bookmakers.',
-                                'Automatic Feature Updates when new versions become available.',
-                              ],
-                              buttonText: 'BUY NOW',
-                              products: _products,
-                              onBuy: _handleBuyNow,
-                            ),
-                            SizedBox(height: 16),
-                            PlanCard(
-                              title: 'Monthly Plan',
-                              price: '\$30.00',
-                              productId: 'monthly_plan_v6',
-                              features: [
-                                'GPTBETS Assistant Model.',
-                                'GPTBETS Prediction Model.',
-                                'Live Odds and insights across all Bookmakers.',
-                                'Automatic Feature Updates when new versions become available.',
-                              ],
-                              buttonText: 'BUY NOW',
-                              products: _products,
-                              onBuy: _handleBuyNow,
-                            ),
-                            SizedBox(height: 16),
-                            PlanCard(
-                              title: 'Yearly Plan',
-                              price: '\$250.00 Per Year',
-                              productId: 'yearly_plan_v6',
-                              features: [
-                                'GPTBETS Assistant Model.',
-                                'GPTBETS Prediction Model.',
-                                'Live Odds and insights across all Bookmakers.',
-                                'Automatic Feature Updates when new versions become available.',
-                              ],
-                              buttonText: 'BUY NOW',
-                              products: _products,
-                              onBuy: _handleBuyNow,
-                            ),
-                          ],
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        PlanCard(
+                          title: 'Weekly Plan',
+                          price: '\$9.00',
+                          productId: 'weekly_plan_v6',
+                          features: _features,
+                          buttonText: 'BUY NOW',
+                          products: _products,
+                          onBuy: _handleBuyNow,
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        PlanCard(
+                          title: 'Monthly Plan',
+                          price: '\$30.00',
+                          productId: 'monthly_plan_v6',
+                          features: _features,
+                          buttonText: 'BUY NOW',
+                          products: _products,
+                          onBuy: _handleBuyNow,
+                        ),
+                        const SizedBox(height: 16),
+                        PlanCard(
+                          title: 'Yearly Plan',
+                          price: '\$250.00',
+                          productId: 'yearly_plan_v6',
+                          features: _features,
+                          buttonText: 'BUY NOW',
+                          products: _products,
+                          onBuy: _handleBuyNow,
+                        ),
+                      ],
                     ),
                   ),
       ),
@@ -248,7 +223,7 @@ class _SubscreenState extends State<Subscreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // User is not logged in, show dialog
+      // Prompt login/register
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -257,7 +232,7 @@ class _SubscreenState extends State<Subscreen> {
               'Authentication Required',
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF9CFF33),
+                color: const Color(0xFF9CFF33),
               ),
             ),
             content: Text(
@@ -277,15 +252,16 @@ class _SubscreenState extends State<Subscreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context);
                   Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (context) => SignUpScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const SignUpScreen()),
                     (route) => false,
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF9CFF33),
+                  backgroundColor: const Color(0xFF9CFF33),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -313,10 +289,10 @@ class _SubscreenState extends State<Subscreen> {
     // Find the product
     final product = _products.firstWhere(
       (p) => p.id == productId,
-      orElse: () => throw Exception('Product not found'),
+      orElse: () => throw Exception('Product not found: $productId'),
     );
 
-    // Initiate purchase
+    // Start purchase
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
     if (Platform.isIOS) {
       await _inAppPurchase.buyNonConsumable(
@@ -325,10 +301,17 @@ class _SubscreenState extends State<Subscreen> {
     } else {
       await _inAppPurchase.buyConsumable(
         purchaseParam: purchaseParam,
-        autoConsume: true,
+        autoConsume: false, // 🔑 save before consuming
       );
     }
   }
+
+  final List<String> _features = [
+    'GPTBETS Assistant Model.',
+    'GPTBETS Prediction Model.',
+    'Live Odds and insights across all Bookmakers.',
+    'Automatic Feature Updates when new versions become available.',
+  ];
 }
 
 class PlanCard extends StatelessWidget {
@@ -362,7 +345,7 @@ class PlanCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF9CFF33).withOpacity(0.15), Colors.white],
+            colors: [const Color(0xFF9CFF33).withOpacity(0.15), Colors.white],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -378,27 +361,26 @@ class PlanCard extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF9CFF33),
+                  color: const Color(0xFF9CFF33),
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 price,
                 style: GoogleFonts.poppins(
                   fontSize: 20,
-                  color: Color(0xFF388E3C),
+                  color: const Color(0xFF388E3C),
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               ...features.map((feature) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.check_circle,
+                        const Icon(Icons.check_circle,
                             color: Color(0xFF9CFF33), size: 18),
-                        SizedBox(width: 10),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             feature,
@@ -409,13 +391,14 @@ class PlanCard extends StatelessWidget {
                       ],
                     ),
                   )),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Center(
                 child: ElevatedButton(
                   onPressed: () => onBuy(context, productId),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF9CFF33),
-                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                    backgroundColor: const Color(0xFF9CFF33),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 40, vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
