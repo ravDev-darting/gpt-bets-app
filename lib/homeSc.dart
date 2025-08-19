@@ -408,11 +408,7 @@ class _HomeScreenState extends State<HomeScreen>
                             scale: _fadeAnimation,
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                if (Platform.isIOS) {
-                                  Get.toNamed('/sub2');
-                                } else {
-                                  Get.toNamed('/sub');
-                                }
+                                Get.toNamed('/sub');
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
