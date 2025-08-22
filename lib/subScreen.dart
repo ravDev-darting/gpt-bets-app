@@ -7,6 +7,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:gptbets_sai_app/signUpPage.dart';
 import 'dart:async';
 import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
 
 class Subscreen extends StatefulWidget {
   const Subscreen({super.key});
@@ -28,14 +29,14 @@ class _SubscreenState extends State<Subscreen> {
     _initializeInAppPurchase();
   }
 
-void _handleRestorePurchases() async {
-  try {
-    await _inAppPurchase.restorePurchases();
-    _showSnackBar("Restoring purchases...");
-  } catch (e) {
-    _showSnackBar("Failed to restore: $e");
+  void _handleRestorePurchases() async {
+    try {
+      await _inAppPurchase.restorePurchases();
+      _showSnackBar("Restoring purchases...");
+    } catch (e) {
+      _showSnackBar("Failed to restore: $e");
+    }
   }
-}
 
   Future<void> _initializeInAppPurchase() async {
     final bool isAvailable = await _inAppPurchase.isAvailable();
@@ -159,6 +160,14 @@ void _handleRestorePurchases() async {
     super.dispose();
   }
 
+  void _openLink(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      _showSnackBar("Could not open link");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -167,17 +176,44 @@ void _handleRestorePurchases() async {
         backgroundColor: Colors.black,
         appBar: AppBar(
           leading: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white)),
-          title: Text('Subscription Plans',
-              style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white)),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          ),
+          title: Text(
+            'Subscription Plans',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
           backgroundColor: const Color(0xFF9CFF33),
           centerTitle: true,
           elevation: 5,
           shadowColor: Colors.black54,
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.info_outline, color: Colors.white),
+              onSelected: (value) {
+                if (value == 'terms') {
+                  _openLink(
+                      "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+                } else if (value == 'privacy') {
+                  _openLink("https://gptbets.io/privacy-policy/");
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'terms',
+                  child: Text("Terms of Use"),
+                ),
+                const PopupMenuItem(
+                  value: 'privacy',
+                  child: Text("Privacy Policy"),
+                ),
+              ],
+            ),
+          ],
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
@@ -223,27 +259,27 @@ void _handleRestorePurchases() async {
                         ),
                         const SizedBox(height: 30),
                         if (Platform.isIOS)
-                        ElevatedButton(
-                          onPressed: _handleRestorePurchases,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 40, vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          ElevatedButton(
+                            onPressed: _handleRestorePurchases,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 6,
+                              shadowColor: Colors.black45,
                             ),
-                            elevation: 6,
-                            shadowColor: Colors.black45,
+                            child: Text(
+                              "Restore Purchases",
+                              style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF388E3C)),
+                            ),
                           ),
-                          child: Text(
-                            "Restore Purchases",
-                            style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF388E3C)),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -453,4 +489,3 @@ class PlanCard extends StatelessWidget {
     );
   }
 }
-
