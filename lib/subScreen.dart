@@ -28,6 +28,15 @@ class _SubscreenState extends State<Subscreen> {
     _initializeInAppPurchase();
   }
 
+void _handleRestorePurchases() async {
+  try {
+    await _inAppPurchase.restorePurchases();
+    _showSnackBar("Restoring purchases...");
+  } catch (e) {
+    _showSnackBar("Failed to restore: $e");
+  }
+}
+
   Future<void> _initializeInAppPurchase() async {
     final bool isAvailable = await _inAppPurchase.isAvailable();
     if (!isAvailable) {
@@ -211,6 +220,29 @@ class _SubscreenState extends State<Subscreen> {
                           buttonText: 'BUY NOW',
                           products: _products,
                           onBuy: _handleBuyNow,
+                        ),
+                        const SizedBox(height: 30),
+                        if (Platform.isIOS)
+                        ElevatedButton(
+                          onPressed: _handleRestorePurchases,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 40, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 6,
+                            shadowColor: Colors.black45,
+                          ),
+                          child: Text(
+                            "Restore Purchases",
+                            style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF388E3C)),
+                          ),
                         ),
                       ],
                     ),
@@ -421,3 +453,4 @@ class PlanCard extends StatelessWidget {
     );
   }
 }
+
