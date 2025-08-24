@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,8 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gptbets_sai_app/homeSc.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:gptbets_sai_app/signUpPage.dart';
-import 'dart:async';
-import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 class Subscreen extends StatefulWidget {
@@ -23,19 +26,13 @@ class _SubscreenState extends State<Subscreen> {
   bool _isAvailable = false;
   bool _loading = true;
 
+  // 🔑 Replace this with your App Store Connect Shared Secret
+  final String _sharedSecret = "90bb4e807bf44799934c8306707399ee";
+
   @override
   void initState() {
     super.initState();
     _initializeInAppPurchase();
-  }
-
-  void _handleRestorePurchases() async {
-    try {
-      await _inAppPurchase.restorePurchases();
-      _showSnackBar("Restoring purchases...");
-    } catch (e) {
-      _showSnackBar("Failed to restore: $e");
-    }
   }
 
   Future<void> _initializeInAppPurchase() async {
@@ -48,7 +45,7 @@ class _SubscreenState extends State<Subscreen> {
       return;
     }
 
-    // Listen globally for purchases
+    // Listen to purchase updates
     _subscription = _inAppPurchase.purchaseStream.listen(
       _listenToPurchaseUpdated,
       onDone: () => _subscription?.cancel(),
@@ -57,12 +54,14 @@ class _SubscreenState extends State<Subscreen> {
 
     // Fetch product details
     const Set<String> productIds = {
-      'weekly_plan_v6',
-      'monthly_plan_v6',
-      'yearly_plan_v6',
+      'com.gptbetsai.weekly_v1',
+      'com.gptbetsai.monthly_v1',
+      'com.gptbetsai.yearly_v1',
     };
+
     final ProductDetailsResponse response =
         await _inAppPurchase.queryProductDetails(productIds);
+
     if (response.notFoundIDs.isNotEmpty) {
       print('Products not found: ${response.notFoundIDs}');
     }
@@ -72,6 +71,46 @@ class _SubscreenState extends State<Subscreen> {
       _products = response.productDetails;
       _loading = false;
     });
+  }
+
+  /// 🔎 Validate receipt with Apple (iOS only)
+  Future<DateTime?> _validateReceipt(PurchaseDetails purchaseDetails) async {
+    if (!Platform.isIOS) return null;
+
+    final receiptData = purchaseDetails.verificationData.serverVerificationData;
+
+    Future<Map<String, dynamic>> sendRequest(String url) async {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "receipt-data": receiptData,
+          "password": _sharedSecret,
+          "exclude-old-transactions": true,
+        }),
+      );
+      return jsonDecode(response.body);
+    }
+
+    // Try production first
+    Map<String, dynamic> result =
+        await sendRequest("https://buy.itunes.apple.com/verifyReceipt");
+
+    if (result["status"] == 21007) {
+      // Sandbox receipt used in production, retry sandbox
+      result =
+          await sendRequest("https://sandbox.itunes.apple.com/verifyReceipt");
+    }
+
+    if (result["status"] == 0 &&
+        result["latest_receipt_info"] != null &&
+        result["latest_receipt_info"].isNotEmpty) {
+      final latest = result["latest_receipt_info"].last;
+      final expiryMs = int.parse(latest["expires_date_ms"]);
+      return DateTime.fromMillisecondsSinceEpoch(expiryMs);
+    }
+
+    return null;
   }
 
   /// Handle purchase updates
@@ -87,60 +126,64 @@ class _SubscreenState extends State<Subscreen> {
       } else if (purchaseDetails.status == PurchaseStatus.purchased ||
           purchaseDetails.status == PurchaseStatus.restored) {
         if (user != null) {
-          DateTime purchaseDate = DateTime.now();
-          DateTime expiryDate;
+          DateTime? expiryDate;
 
-          switch (purchaseDetails.productID) {
-            case 'weekly_plan_v6':
-              expiryDate = purchaseDate.add(const Duration(days: 7));
-              break;
-            case 'monthly_plan_v6':
-              expiryDate = DateTime(
-                  purchaseDate.year, purchaseDate.month + 1, purchaseDate.day);
-              break;
-            case 'yearly_plan_v6':
-              expiryDate = DateTime(
-                  purchaseDate.year + 1, purchaseDate.month, purchaseDate.day);
-              break;
-            default:
-              expiryDate = purchaseDate;
+          if (Platform.isIOS) {
+            expiryDate = await _validateReceipt(purchaseDetails);
+          } else {
+            // Fallback manual expiry for Android
+            final purchaseDate = DateTime.now();
+            switch (purchaseDetails.productID) {
+              case 'com.gptbetsai.weekly_v1':
+                expiryDate = purchaseDate.add(const Duration(days: 7));
+                break;
+              case 'com.gptbetsai.monthly_v1':
+                expiryDate = DateTime(purchaseDate.year, purchaseDate.month + 1,
+                    purchaseDate.day);
+                break;
+              case 'com.gptbetsai.yearly_v1':
+                expiryDate = DateTime(purchaseDate.year + 1, purchaseDate.month,
+                    purchaseDate.day);
+                break;
+            }
           }
 
-          // Save to Firestore BEFORE consuming
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .set({
-            'subscription': {
-              'productId': purchaseDetails.productID,
-              'status': 'active',
-              'purchaseDate': purchaseDate,
-              'expiryDate': expiryDate,
-              'isActive': true,
-            },
-          }, SetOptions(merge: true));
-
-          _showSnackBar('Purchase successful!');
-
-          // ✅ Complete purchase (consume it if Android consumable)
-          if (purchaseDetails.pendingCompletePurchase) {
-            await _inAppPurchase.completePurchase(purchaseDetails);
-          }
-
-          // Navigate to Home
-          Navigator.pushAndRemoveUntil(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  const HomeScreen(),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
+          if (expiryDate != null && expiryDate.isAfter(DateTime.now())) {
+            // ✅ Save to Firestore only if valid
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .set({
+              'subscription': {
+                'productId': purchaseDetails.productID,
+                'status': 'active',
+                'expiryDate': expiryDate,
+                'isActive': true,
               },
-              transitionDuration: const Duration(milliseconds: 800),
-            ),
-            (route) => false,
-          );
+            }, SetOptions(merge: true));
+
+            _showSnackBar('Purchase successful!');
+
+            if (purchaseDetails.pendingCompletePurchase) {
+              await _inAppPurchase.completePurchase(purchaseDetails);
+            }
+
+            Navigator.pushAndRemoveUntil(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    const HomeScreen(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                transitionDuration: const Duration(milliseconds: 800),
+              ),
+              (route) => false,
+            );
+          } else {
+            _showSnackBar("Purchase invalid or expired");
+          }
         }
       } else if (purchaseDetails.status == PurchaseStatus.canceled) {
         _showSnackBar('Purchase canceled');
@@ -168,125 +211,6 @@ class _SubscreenState extends State<Subscreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          ),
-          title: Text(
-            'Subscription Plans',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          backgroundColor: const Color(0xFF9CFF33),
-          centerTitle: true,
-          elevation: 5,
-          shadowColor: Colors.black54,
-          actions: [
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.info_outline, color: Colors.white),
-              onSelected: (value) {
-                if (value == 'terms') {
-                  _openLink(
-                      "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
-                } else if (value == 'privacy') {
-                  _openLink("https://gptbets.io/privacy-policy/");
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'terms',
-                  child: Text("Terms of Use"),
-                ),
-                const PopupMenuItem(
-                  value: 'privacy',
-                  child: Text("Privacy Policy"),
-                ),
-              ],
-            ),
-          ],
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : !_isAvailable
-                ? Center(
-                    child: Text(
-                      'In-app purchases are not available',
-                      style: GoogleFonts.poppins(color: Colors.white),
-                    ),
-                  )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        PlanCard(
-                          title: 'Weekly Plan',
-                          price: '\$9.00',
-                          productId: 'weekly_plan_v6',
-                          features: _features,
-                          buttonText: 'BUY NOW',
-                          products: _products,
-                          onBuy: _handleBuyNow,
-                        ),
-                        const SizedBox(height: 16),
-                        PlanCard(
-                          title: 'Monthly Plan',
-                          price: '\$30.00',
-                          productId: 'monthly_plan_v6',
-                          features: _features,
-                          buttonText: 'BUY NOW',
-                          products: _products,
-                          onBuy: _handleBuyNow,
-                        ),
-                        const SizedBox(height: 16),
-                        PlanCard(
-                          title: 'Yearly Plan',
-                          price: '\$250.00',
-                          productId: 'yearly_plan_v6',
-                          features: _features,
-                          buttonText: 'BUY NOW',
-                          products: _products,
-                          onBuy: _handleBuyNow,
-                        ),
-                        const SizedBox(height: 30),
-                        if (Platform.isIOS)
-                          ElevatedButton(
-                            onPressed: _handleRestorePurchases,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 40, vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 6,
-                              shadowColor: Colors.black45,
-                            ),
-                            child: Text(
-                              "Restore Purchases",
-                              style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF388E3C)),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-      ),
-    );
-  }
-
   void _handleBuyNow(BuildContext context, String productId) async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -296,27 +220,19 @@ class _SubscreenState extends State<Subscreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text(
-              'Authentication Required',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF9CFF33),
-              ),
-            ),
+            title: Text('Authentication Required',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF9CFF33))),
             content: Text(
-              'Please register or log in to purchase a subscription.',
-              style: GoogleFonts.poppins(fontSize: 16),
-            ),
+                'Please register or log in to purchase a subscription.',
+                style: GoogleFonts.poppins(fontSize: 16)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'Cancel',
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                child: Text('Cancel',
+                    style: GoogleFonts.poppins(
+                        color: Colors.grey, fontWeight: FontWeight.w500)),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -334,13 +250,9 @@ class _SubscreenState extends State<Subscreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text(
-                  'Register Yourself',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                child: Text('Register Yourself',
+                    style: GoogleFonts.poppins(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
               ),
             ],
             shape: RoundedRectangleBorder(
@@ -363,13 +275,11 @@ class _SubscreenState extends State<Subscreen> {
     // Start purchase
     final PurchaseParam purchaseParam = PurchaseParam(productDetails: product);
     if (Platform.isIOS) {
-      await _inAppPurchase.buyNonConsumable(
-        purchaseParam: purchaseParam,
-      );
+      await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
     } else {
       await _inAppPurchase.buyConsumable(
         purchaseParam: purchaseParam,
-        autoConsume: false, // 🔑 save before consuming
+        autoConsume: false,
       );
     }
   }
@@ -380,6 +290,95 @@ class _SubscreenState extends State<Subscreen> {
     'Live Odds and insights across all Bookmakers.',
     'Automatic Feature Updates when new versions become available.',
   ];
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          ),
+          title: Text('Subscription Plans',
+              style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white)),
+          backgroundColor: const Color(0xFF9CFF33),
+          centerTitle: true,
+          elevation: 5,
+          shadowColor: Colors.black54,
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.info_outline, color: Colors.white),
+              onSelected: (value) {
+                if (value == 'terms') {
+                  _openLink(
+                      "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/");
+                } else if (value == 'privacy') {
+                  _openLink("https://gptbets.io/privacy-policy/");
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'terms', child: Text("Terms of Use")),
+                PopupMenuItem(value: 'privacy', child: Text("Privacy Policy")),
+              ],
+            ),
+          ],
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : !_isAvailable
+                ? Center(
+                    child: Text('In-app purchases are not available',
+                        style: GoogleFonts.poppins(color: Colors.white)),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        ..._products.map((p) => Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: PlanCard(
+                                title: p.title,
+                                price: p.price,
+                                productId: p.id,
+                                features: _features,
+                                buttonText: 'BUY NOW',
+                                enabled: _products.isNotEmpty,
+                                onBuy: _handleBuyNow,
+                              ),
+                            )),
+                        const SizedBox(height: 30),
+                        if (Platform.isIOS)
+                          ElevatedButton(
+                            onPressed: () => _inAppPurchase.restorePurchases(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 6,
+                              shadowColor: Colors.black45,
+                            ),
+                            child: Text("Restore Purchases",
+                                style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF388E3C))),
+                          ),
+                      ],
+                    ),
+                  ),
+      ),
+    );
+  }
 }
 
 class PlanCard extends StatelessWidget {
@@ -388,7 +387,7 @@ class PlanCard extends StatelessWidget {
   final String productId;
   final List<String> features;
   final String buttonText;
-  final List<ProductDetails> products;
+  final bool enabled;
   final Function(BuildContext, String) onBuy;
 
   const PlanCard({
@@ -398,7 +397,7 @@ class PlanCard extends StatelessWidget {
     required this.productId,
     required this.features,
     required this.buttonText,
-    required this.products,
+    required this.enabled,
     required this.onBuy,
   });
 
@@ -406,9 +405,7 @@ class PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 10,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       shadowColor: Colors.black45,
       child: Container(
         decoration: BoxDecoration(
@@ -421,69 +418,54 @@ class PlanCard extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
                 style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF9CFF33),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                price,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF9CFF33))),
+            const SizedBox(height: 8),
+            Text(price,
                 style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  color: const Color(0xFF388E3C),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...features.map((feature) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.check_circle,
-                            color: Color(0xFF9CFF33), size: 18),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            feature,
+                    fontSize: 20,
+                    color: const Color(0xFF388E3C),
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ...features.map((f) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(children: [
+                    const Icon(Icons.check_circle,
+                        color: Color(0xFF9CFF33), size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Text(f,
                             style: GoogleFonts.poppins(
-                                fontSize: 16, color: Colors.black87),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
-              const SizedBox(height: 16),
-              Center(
-                child: ElevatedButton(
-                  onPressed: () => onBuy(context, productId),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF9CFF33),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 40, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 6,
-                    shadowColor: Colors.black45,
+                                fontSize: 16, color: Colors.black87))),
+                  ]),
+                )),
+            const SizedBox(height: 16),
+            Center(
+              child: ElevatedButton(
+                onPressed: enabled ? () => onBuy(context, productId) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF9CFF33),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    buttonText,
+                  elevation: 6,
+                  shadowColor: Colors.black45,
+                ),
+                child: Text(buttonText,
                     style: GoogleFonts.poppins(
                         fontSize: 18,
                         color: Colors.white,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
+                        fontWeight: FontWeight.bold)),
               ),
-            ],
-          ),
+            ),
+          ]),
         ),
       ),
     );
