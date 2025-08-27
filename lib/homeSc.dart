@@ -247,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen>
                   FadeTransition(
                     opacity: _fadeAnimation,
                     child: Text(
-                      'AI Sports Betting Assistant\nYour sports betting coach — in your pocket.',
+                      'AI Sports Betting Assistant\nYour sports betting coach — in your pocket.',
                       style: GoogleFonts.roboto(
                         color: Colors.grey,
                         fontSize: subtitleFontSize,
@@ -299,15 +299,15 @@ class _HomeScreenState extends State<HomeScreen>
                               'Sports Hub',
                               isSmallScreen: isSmallScreen,
                               onTap: () {
-                                if (_loggediN && _isSubscribed) {
+                                if (_loggediN) {
                                   Get.toNamed('/sportsHub');
                                 } else {
                                   Get.snackbar(
                                     backgroundColor: Colors.white,
                                     duration: const Duration(seconds: 3),
                                     colorText: Colors.black,
-                                    'Subscribe',
-                                    'Subscribe to access this feature',
+                                    'Register',
+                                    'Register yourself up to access this feature!!',
                                   );
                                 }
                               },
@@ -684,3 +684,4 @@ Future<void> launchUrlExample() async {
     throw 'Could not launch $url';
   }
 }
+
