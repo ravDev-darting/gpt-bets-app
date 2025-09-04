@@ -13,7 +13,7 @@ if (keystorePropertiesFile.exists()) {
     throw new GradleException("Could not read key.properties!")
 }
 android {
-    namespace = "com.us.gptbetssai"
+    namespace = "com.us.gptbetai"
     compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
@@ -28,11 +28,11 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.us.gptbetssai"
+        applicationId = "com.us.gptbetai"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 23
-        targetSdk = 34
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled true

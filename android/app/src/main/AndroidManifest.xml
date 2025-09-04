@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.us.gptbetssai"
+    package="com.us.gptbetai"
     xmlns:tools="http://schemas.android.com/tools"
     >
     <queries>
