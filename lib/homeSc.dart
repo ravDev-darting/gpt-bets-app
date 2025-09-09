@@ -170,7 +170,6 @@ class _HomeScreenState extends State<HomeScreen>
     final double screenWidth = MediaQuery.of(context).size.width;
     final bool isSmallScreen = screenWidth < 600;
     final bool isMediumScreen = screenWidth >= 600 && screenWidth < 900;
-    final bool isLargeScreen = screenWidth >= 900;
 
     final double titleFontSize = isSmallScreen
         ? 20
