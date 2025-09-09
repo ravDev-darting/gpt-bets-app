@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:gptbets_sai_app/loginPage.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,46 +21,51 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+
   bool _loggediN = false;
   bool _isSubscribed = false;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Future<void> _checkLoginAndSubscriptionStatus() async {
-  //   User? user = _auth.currentUser;
-  //   if (user != null) {
-  //     setState(() {
-  //       _loggediN = true;
-  //     });
-  //     try {
-  //       DocumentSnapshot doc =
-  //           await _firestore.collection('users').doc(user.uid).get();
-  //       setState(() {
-  //         _isSubscribed = doc.exists &&
-  //             (doc.data() as Map<String, dynamic>)['subscription']
-  //                     ['isActive'] ==
-  //                 true;
-  //       });
-  //     } catch (e) {
-  //       print('Error fetching subscription status: $e');
-  //       setState(() {
-  //         _isSubscribed = false;
-  //       });
-  //     }
-  //   } else {
-  //     setState(() {
-  //       _loggediN = false;
-  //       _isSubscribed = false;
-  //     });
-  //   }
-  // }
+  late StreamSubscription<List<PurchaseDetails>> _purchaseSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _controller.forward();
+
+    _checkLoginAndSubscriptionStatus();
+
+    // Listen to purchase updates
+    _purchaseSubscription = InAppPurchase.instance.purchaseStream
+        .listen(_listenToPurchases, onError: (error) {
+      print('Purchase stream error: $error');
+    });
+
+    // Trigger restore purchases for iOS promo codes
+    if (Platform.isIOS) {
+      InAppPurchase.instance.restorePurchases();
+    }
+  }
+
+  @override
+  void dispose() {
+    _purchaseSubscription.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
 
   Future<void> _checkLoginAndSubscriptionStatus() async {
     User? user = _auth.currentUser;
     if (user != null) {
-      setState(() {
-        _loggediN = true;
-      });
+      setState(() => _loggediN = true);
 
       try {
         DocumentSnapshot doc =
@@ -81,38 +87,24 @@ class _HomeScreenState extends State<HomeScreen>
               }
             }
 
-            // Check expiry
             if (expiryDate != null && now.isBefore(expiryDate)) {
-              setState(() {
-                _isSubscribed = true;
-              });
+              setState(() => _isSubscribed = true);
             } else {
-              // Expired - update Firestore
+              // Expired
               await _firestore.collection('users').doc(user.uid).set({
-                'subscription': {
-                  'isActive': false,
-                }
+                'subscription': {'isActive': false}
               }, SetOptions(merge: true));
-
-              setState(() {
-                _isSubscribed = false;
-              });
+              setState(() => _isSubscribed = false);
             }
           } else {
-            setState(() {
-              _isSubscribed = false;
-            });
+            setState(() => _isSubscribed = false);
           }
         } else {
-          setState(() {
-            _isSubscribed = false;
-          });
+          setState(() => _isSubscribed = false);
         }
       } catch (e) {
         print('Error fetching subscription status: $e');
-        setState(() {
-          _isSubscribed = false;
-        });
+        setState(() => _isSubscribed = false);
       }
     } else {
       setState(() {
@@ -122,22 +114,54 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginAndSubscriptionStatus();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
-  }
+  void _listenToPurchases(List<PurchaseDetails> purchases) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+    for (var purchaseDetails in purchases) {
+      if (purchaseDetails.status == PurchaseStatus.purchased ||
+          purchaseDetails.status == PurchaseStatus.restored) {
+        DateTime? expiryDate;
+        final purchaseDate = DateTime.now();
+
+        switch (purchaseDetails.productID) {
+          case 'com.gptbetsai.weekly_v1':
+            expiryDate = purchaseDate.add(const Duration(days: 7));
+            break;
+          case 'com.gptbetsai.monthly_v1':
+            expiryDate = DateTime(
+                purchaseDate.year, purchaseDate.month + 1, purchaseDate.day);
+            break;
+          case 'com.gptbetsai.yearly_v1':
+            expiryDate = DateTime(
+                purchaseDate.year + 1, purchaseDate.month, purchaseDate.day);
+            break;
+        }
+
+        if (expiryDate != null && expiryDate.isAfter(DateTime.now())) {
+          // ✅ Save to Firestore only if valid
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+            'subscription': {
+              'productId': purchaseDetails.productID,
+              'status': 'active',
+              'expiryDate': expiryDate,
+              'isActive': true,
+            },
+          }, SetOptions(merge: true));
+
+          // Update local state
+          setState(() => _isSubscribed = true);
+        }
+
+        // Complete the purchase
+        if (purchaseDetails.pendingCompletePurchase) {
+          await InAppPurchase.instance.completePurchase(purchaseDetails);
+        }
+      }
+    }
   }
 
   @override
@@ -217,9 +241,7 @@ class _HomeScreenState extends State<HomeScreen>
             constraints: const BoxConstraints(maxWidth: 1200),
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: horizontalPadding,
-                vertical: verticalPadding,
-              ),
+                  horizontal: horizontalPadding, vertical: verticalPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -256,7 +278,6 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   SizedBox(height: isSmallScreen ? 16 : 24),
-                  SizedBox(height: _loggediN ? (isSmallScreen ? 20 : 30) : 10),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -346,100 +367,8 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   if (!_loggediN || (_loggediN && !_isSubscribed))
-                    Container(
-                      margin: EdgeInsets.all(isSmallScreen ? 4 : 8),
-                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 12,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                        gradient: LinearGradient(
-                          colors: [themeColor.withOpacity(0.7), themeColor],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.star,
-                            size: isSmallScreen
-                                ? 40
-                                : isLargeScreen
-                                    ? 60
-                                    : 50,
-                            color: Colors.white,
-                          ),
-                          SizedBox(height: isSmallScreen ? 12 : 20),
-                          Text(
-                            _loggediN
-                                ? 'Activate Your Subscription'
-                                : 'Unlock the Power of GPT BETS AI',
-                            style: GoogleFonts.orbitron(
-                              fontSize: isSmallScreen
-                                  ? 18
-                                  : isLargeScreen
-                                      ? 28
-                                      : 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: isSmallScreen ? 12 : 20),
-                          Text(
-                            _loggediN
-                                ? 'Subscribe to access premium features and insights!'
-                                : 'Subscribe now to access exclusive features and insights!',
-                            style: GoogleFonts.roboto(
-                              fontSize: subtitleFontSize,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: isSmallScreen ? 16 : 24),
-                          ScaleTransition(
-                            scale: _fadeAnimation,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Get.toNamed('/sub');
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isSmallScreen ? 30 : 40,
-                                  vertical: isSmallScreen ? 12 : 15,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                elevation: 8,
-                                shadowColor: Colors.black.withOpacity(0.3),
-                              ),
-                              icon: Icon(
-                                Icons.lock_open,
-                                color: themeColor,
-                                size: isSmallScreen ? 20 : 24,
-                              ),
-                              label: Text(
-                                'Subscribe Now',
-                                style: GoogleFonts.orbitron(
-                                  fontSize: buttonFontSize,
-                                  fontWeight: FontWeight.bold,
-                                  color: themeColor,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildSubscribeCard(
+                        themeColor, isSmallScreen, buttonFontSize),
                   SizedBox(height: isSmallScreen ? 8 : 16),
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
@@ -466,50 +395,6 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                   ),
-                  SizedBox(height: isSmallScreen ? 8 : 16),
-                  SizedBox(height: isSmallScreen ? 8 : 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12.0, vertical: 6.0),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.black.withOpacity(0.7),
-                          Colors.black.withOpacity(0.5),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(8.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF9CFF33).withOpacity(0.3),
-                          blurRadius: 6.0,
-                          spreadRadius: 1.0,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      'Beat the house. GPTBETS AI is your edge against the sportsbooks.',
-                      style: TextStyle(
-                        fontSize: 16.0, // Smaller font size
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF9CFF33),
-                        letterSpacing: 0.8,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withOpacity(0.4),
-                            offset: const Offset(1, 1),
-                            blurRadius: 3.0,
-                          ),
-                        ],
-                        fontFamily: 'Roboto', // Ensure font is in pubspec.yaml
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  SizedBox(height: isSmallScreen ? 8 : 16),
                 ],
               ),
             ),
@@ -573,6 +458,96 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  Widget _buildSubscribeCard(
+      Color themeColor, bool isSmallScreen, double buttonFontSize) {
+    return Container(
+      margin: EdgeInsets.all(isSmallScreen ? 4 : 8),
+      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 12,
+            spreadRadius: 4,
+          ),
+        ],
+        gradient: LinearGradient(
+          colors: [themeColor.withOpacity(0.7), themeColor],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.star,
+            size: isSmallScreen ? 40 : 50,
+            color: Colors.white,
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 20),
+          Text(
+            _loggediN
+                ? 'Activate Your Subscription'
+                : 'Unlock the Power of GPT BETS AI',
+            style: GoogleFonts.orbitron(
+              fontSize: isSmallScreen ? 18 : 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 20),
+          Text(
+            _loggediN
+                ? 'Subscribe to access premium features and insights!'
+                : 'Subscribe now to access exclusive features and insights!',
+            style: GoogleFonts.roboto(
+              fontSize: isSmallScreen ? 14 : 16,
+              color: Colors.white.withOpacity(0.9),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: isSmallScreen ? 16 : 24),
+          ScaleTransition(
+            scale: _fadeAnimation,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Get.toNamed('/sub');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 30 : 40,
+                  vertical: isSmallScreen ? 12 : 15,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 8,
+                shadowColor: Colors.black.withOpacity(0.3),
+              ),
+              icon: Icon(
+                Icons.lock_open,
+                color: themeColor,
+                size: isSmallScreen ? 20 : 24,
+              ),
+              label: Text(
+                'Subscribe Now',
+                style: GoogleFonts.orbitron(
+                  fontSize: buttonFontSize,
+                  fontWeight: FontWeight.bold,
+                  color: themeColor,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showLogoutConfirmation(BuildContext context) {
     final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
     showDialog(
@@ -626,7 +601,6 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _logout(BuildContext context) async {
-    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
     try {
       await FirebaseAuth.instance.signOut();
       Navigator.pushAndRemoveUntil(
@@ -635,43 +609,7 @@ class _HomeScreenState extends State<HomeScreen>
         ModalRoute.withName(''),
       );
     } catch (e) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: const Color(0xFF1A1A1A),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-            title: Text(
-              'Error',
-              style: GoogleFonts.orbitron(
-                color: const Color(0xFF9CFF33),
-                fontWeight: FontWeight.bold,
-                fontSize: isSmallScreen ? 18 : 20,
-              ),
-            ),
-            content: Text(
-              e.toString(),
-              style: TextStyle(
-                  color: Colors.white, fontSize: isSmallScreen ? 14 : 16),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text(
-                  'OK',
-                  style: TextStyle(
-                      color: const Color(0xFF9CFF33),
-                      fontSize: isSmallScreen ? 14 : 16),
-                ),
-              ),
-            ],
-          );
-        },
-      );
+      print('Logout error: $e');
     }
   }
 }
@@ -684,4 +622,3 @@ Future<void> launchUrlExample() async {
     throw 'Could not launch $url';
   }
 }
-
