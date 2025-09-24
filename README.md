@@ -106,8 +106,18 @@ GPTBETS is an **AI-powered sports betting assistant app** that combines sports i
 
 <img src="screenshots/gptbet/profile_screen.png" width="300"/>
 
-## 📲 Download
+## 📲 Installation & Availability
 
-<a href="https://play.google.com/store/apps/details?id=com.us.gptbetssai&hl=en-US&ah=O5KdI-mhB1HvbabYIpevF6WnWfc" target="_blank">
-  <img alt="Get it on Google Play" src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" width="200"/>
-</a>
+This app is currently **submitted to Google Play Store** and under review.
+
+- 📌 Play Store link (may only work on mobile for now):  
+  [Weather App on Google Play](https://play.google.com/store/apps/details?id=com.us.gptbetssai&hl=en-US&ah=O5KdI-mhB1HvbabYIpevF6WnWfc)
+
+- ⚠️ Note: This link may not open on desktop until Google Play review is complete.
+
+---
+
+## 📦 Download (Developer Release)
+
+- [app-release.aab](https://github.com/ravDev-darting/gpt-bets-app/releases/download/v1.0.0/app-release.aab) → Signed App Bundle (for Play Store submission).
+- ⚠️ `.aab` files cannot be installed directly on devices. Google Play converts this into optimized APKs.
