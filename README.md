@@ -111,7 +111,7 @@ GPTBETS is an **AI-powered sports betting assistant app** that combines sports i
 This app is currently **submitted to Google Play Store** and under review.
 
 - 📌 Play Store link (may only work on mobile for now):  
-  [Weather App on Google Play](https://play.google.com/store/apps/details?id=com.us.gptbetssai&hl=en-US&ah=O5KdI-mhB1HvbabYIpevF6WnWfc)
+  [GPTBETS App on Google Play](https://play.google.com/store/apps/details?id=com.us.gptbetssai&hl=en-US&ah=O5KdI-mhB1HvbabYIpevF6WnWfc)
 
 - ⚠️ Note: This link may not open on desktop until Google Play review is complete.
 
