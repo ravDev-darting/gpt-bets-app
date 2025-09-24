@@ -105,3 +105,9 @@ GPTBETS is an **AI-powered sports betting assistant app** that combines sports i
 ### 👤 Profile Screen
 
 <img src="screenshots/gptbet/profile_screen.png" width="300"/>
+
+## 📲 Download
+
+<a href="https://play.google.com/store/apps/details?id=com.us.gptbetssai&hl=en-US&ah=O5KdI-mhB1HvbabYIpevF6WnWfc" target="_blank">
+  <img alt="Get it on Google Play" src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" width="200"/>
+</a>
